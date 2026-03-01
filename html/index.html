@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel IoT - gtpc.com.br</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f4f4f9; margin: 0;}
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; width: 300px; margin-bottom: 20px;}
+        h2 { font-size: 1.2rem; color: #333; margin-bottom: 5px; }
+        .subtitle { font-size: 0.8rem; color: #666; margin-bottom: 20px; }
+        
+        /* Estilos do Botão Físico */
+        #status-indicator { width: 50px; height: 50px; border-radius: 50%; background-color: gray; margin: 20px auto; transition: background-color 0.3s; }
+        .on { background-color: #2ecc71 !important; box-shadow: 0 0 15px #2ecc71; }
+        .off { background-color: #e74c3c !important; }
+        
+        /* Estilos do Toggle Switch Virtual */
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; margin-top: 10px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #3498db; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        
+        #connection-status { margin-top: 20px; font-weight: bold; color: #f39c12; }
+    </style>
+</head>
+<body>
+
+    <!-- Card do Hardware -->
+    <div class="card">
+        <h2>Placa HW-364A</h2>
+        <div class="subtitle">Estado do Botão Físico (Input)</div>
+        <div id="status-indicator"></div>
+        <h3 id="status-text">Aguardando...</h3>
+    </div>
+
+    <!-- Card da Variável Virtual -->
+    <div class="card">
+        <h2>Variável Interna</h2>
+        <div class="subtitle">Controle via MQTT (Output)</div>
+        <label class="switch">
+            <!-- Evento onchange chama a função de publicar -->
+            <input type="checkbox" id="virtual-toggle" onchange="toggleVirtualVariable()">
+            <span class="slider"></span>
+        </label>
+        <h3 id="virtual-text">OFF</h3>
+    </div>
+
+    <div id="connection-status">Aguardando conexão ao Broker...</div>
+
+    <script>
+        const broker = "iot.gtpc.com.br"; // Substitua pelo seu IP/Domínio
+        const port = 9001; 
+        const clientId = "web-" + Math.random().toString(16).substr(2, 8);
+        
+        const topico_hw = "gtpc/iot/botao";
+        const topico_virtual = "gtpc/iot/virtual";
+
+        client = new Paho.MQTT.Client(broker, port, clientId);
+
+        client.onConnectionLost = function(responseObject) {
+            document.getElementById("connection-status").innerText = "❌ Desconectado do Broker";
+            document.getElementById("connection-status").style.color = "#e74c3c";
+        };
+
+        client.onMessageArrived = function(message) {
+            const payload = message.payloadString;
+            const topic = message.destinationName;
+
+            // Se for evento do botão físico
+            if (topic === topico_hw) {
+                const indicator = document.getElementById("status-indicator");
+                const text = document.getElementById("status-text");
+
+                if(payload === "PRESSIONADO" || payload === "1") {
+                    indicator.className = "on";
+                    text.innerText = "PRESSIONADO";
+                } else {
+                    indicator.className = "off";
+                    text.innerText = "SOLTO";
+                }
+            } 
+            // Se for evento da variável virtual (Mantém abas sincronizadas)
+            else if (topic === topico_virtual) {
+                const toggle = document.getElementById("virtual-toggle");
+                const toggleText = document.getElementById("virtual-text");
+                
+                if(payload === "ON") {
+                    toggle.checked = true;
+                    toggleText.innerText = "ON";
+                } else {
+                    toggle.checked = false;
+                    toggleText.innerText = "OFF";
+                }
+            }
+        };
+
+        client.connect({
+            // useSSL: true, // Descomente se usar HTTPS
+            onSuccess: function() {
+                document.getElementById("connection-status").innerText = "✅ Conectado ao Broker MQTT";
+                document.getElementById("connection-status").style.color = "#2ecc71";
+                
+                // Assina AMBOS os tópicos
+                client.subscribe(topico_hw);
+                client.subscribe(topico_virtual);
+            }
+        });
+
+        // Função disparada ao clicar no Toggle Switch na tela
+        function toggleVirtualVariable() {
+            const isChecked = document.getElementById("virtual-toggle").checked;
+            const payload = isChecked ? "ON" : "OFF";
+            
+            // Atualiza o texto visual imediatamente
+            document.getElementById("virtual-text").innerText = payload;
+
+            // Publica a mensagem MQTT para o ESP8266
+            const message = new Paho.MQTT.Message(payload);
+            message.destinationName = topico_virtual;
+            client.send(message);
+        }
+    </script>
+</body>
+</html>
