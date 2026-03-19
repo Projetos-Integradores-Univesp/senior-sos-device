@@ -1,6 +1,7 @@
 # Senior SOS Device
 
 Desenvolvimento de dispositivo IoT para disparo de alerta de emergência via rádio frequência para atendimento emergencial de idosos.
+
 Desenvolvimento de aplicativo móvel para recebimento dos alertas e gerenciamento do dispositivo com integração ao backend.
 
 Projeto realizado no Projeto Integrador III -1º Semestre de 2026 da Universidade Virtual do Estado de São Paulo (UNIVESP) - Eixo Computação.
