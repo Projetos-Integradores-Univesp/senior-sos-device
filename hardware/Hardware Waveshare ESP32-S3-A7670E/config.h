@@ -103,12 +103,12 @@
 #define FALL_CONFIRM_WINDOW_SEC   5
 
 // Alert / communication
-#define ALERT_PHONE_NUMBER  "+5511979614028"   // Emergency contact SMS number
-#define ALERT_SERVER_URL    "http://iot.gtpc.com.br/api/alert"
+#define ALERT_PHONE_NUMBER  ""   // Emergency contact SMS number
+#define ALERT_SERVER_URL    "
 
 // WiFi credentials (used when available — faster + lower power than 4G)
-#define WIFI_SSID           "CLARO_2G13A70A"
-#define WIFI_PASSWORD       "B813A70A"
+#define WIFI_SSID           ""
+#define WIFI_PASSWORD       ""
 
 // ============================================================================
 // MQTT — Mosquitto broker on your VPS
@@ -116,7 +116,7 @@
 #define MQTT_BROKER         "iot.gtpc.com.br"
 #define MQTT_PORT           1883        // Use 8883 for TLS
 #define MQTT_USER           "elderguard"
-#define MQTT_PASSWORD       "@@elderGuard##"  // Set to match your Mosquitto passwd file
+#define MQTT_PASSWORD       ""  // Set to match your Mosquitto passwd file
 #define MQTT_CLIENT_ID      "elderguard-001"
 
 // Topic hierarchy: elderguard/{device_id}/{channel}
