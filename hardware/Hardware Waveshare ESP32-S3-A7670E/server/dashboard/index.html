@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ElderGuard — Live Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  :root {
+    --bg: #0c0f14;
+    --surface: #161a22;
+    --surface2: #1e232d;
+    --border: #2a303c;
+    --text: #e4e7ec;
+    --text2: #8b92a0;
+    --accent: #38bdf8;
+    --danger: #f87171;
+    --warn: #fbbf24;
+    --ok: #34d399;
+    --panic-bg: #451a1a;
+    --panic-border: #f87171;
+    --fall-bg: #452a1a;
+    --fall-border: #fbbf24;
+    --radius: 10px;
+    --font: 'DM Sans', system-ui, sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.3px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--text2);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .logo-dot.online {
+    background: var(--ok);
+    box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
+  }
+  .logo-dot.alert {
+    background: var(--danger);
+    box-shadow: 0 0 12px rgba(248, 113, 113, 0.6);
+    animation: pulse-dot 1s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.4); }
+  }
+
+  .conn-status {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .conn-status .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text2);
+  }
+  .conn-status.connected .dot { background: var(--ok); }
+
+  /* ---- GRID ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    grid-template-rows: auto minmax(400px, 1fr);
+    gap: 1px;
+    background: var(--border);
+    height: calc(100vh - 57px);
+    overflow: hidden;
+  }
+
+  /* ---- ALERT BANNER ---- */
+  .alert-banner {
+    grid-column: 1 / -1;
+    padding: 14px 24px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    font-size: 15px;
+    background: var(--surface);
+    animation: slide-down 0.3s ease-out;
+  }
+  .alert-banner.visible { display: flex; }
+  .alert-banner.panic {
+    background: var(--panic-bg);
+    border-left: 3px solid var(--panic-border);
+  }
+  .alert-banner.fall {
+    background: var(--fall-bg);
+    border-left: 3px solid var(--fall-border);
+  }
+  .alert-banner .alert-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .alert-banner .alert-text { flex: 1; }
+  .alert-banner .alert-time {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .alert-banner .dismiss {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .dismiss:hover { border-color: var(--text2); color: var(--text); }
+  @keyframes slide-down {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---- MAP ---- */
+  .map-panel {
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  #map {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+  }
+
+  /* ---- SIDEBAR ---- */
+  .sidebar {
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 14px;
+  }
+
+  /* ---- TELEMETRY CARDS ---- */
+  .telem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .telem-card {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+  .telem-label {
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 4px;
+    font-family: var(--mono);
+  }
+  .telem-value {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .telem-unit {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text2);
+    margin-left: 2px;
+  }
+  .telem-value.ok    { color: var(--ok); }
+  .telem-value.warn  { color: var(--warn); }
+  .telem-value.danger { color: var(--danger); }
+
+  /* ---- LOCATION INFO ---- */
+  .loc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  .loc-row + .loc-row { border-top: 1px solid var(--border); }
+  .loc-key { color: var(--text2); font-family: var(--mono); font-size: 12px; }
+  .loc-val { font-weight: 500; font-family: var(--mono); }
+
+  /* ---- COMMAND BUTTONS ---- */
+  .cmd-row {
+    display: flex;
+    gap: 8px;
+  }
+  .cmd-btn {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .cmd-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(56, 189, 248, 0.06);
+  }
+  .cmd-btn.danger:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.06);
+  }
+
+  /* ---- LOG ---- */
+  .log-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .log-item {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text2);
+    padding: 6px 8px;
+    background: var(--surface2);
+    border-radius: 6px;
+    line-height: 1.5;
+    animation: fade-in 0.2s ease-out;
+  }
+  .log-item .log-time { color: var(--text2); margin-right: 6px; }
+  .log-item.alert-log { color: var(--danger); }
+  .log-item.fall-log  { color: var(--warn); }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 800px) {
+    .grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: 300px 1fr;
+      height: auto;
+      overflow: visible;
+    }
+    .map-panel {
+      min-height: 300px;
+    }
+    .telem-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot" id="statusDot"></div>
+    ElderGuard
+  </div>
+  <div class="conn-status" id="connStatus">
+    <div class="dot"></div>
+    Connecting...
+  </div>
+</header>
+
+<div class="grid">
+  <!-- Alert banner -->
+  <div class="alert-banner" id="alertBanner">
+    <span class="alert-icon" id="alertIcon"></span>
+    <span class="alert-text" id="alertText"></span>
+    <span class="alert-time" id="alertTime"></span>
+    <button class="dismiss" onclick="dismissAlert()">Hide</button>
+    <button class="dismiss danger" onclick="acknowledgeAlert()">Acknowledge</button>
+  </div>
+
+  <!-- Map -->
+  <div class="map-panel">
+    <div id="map"></div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Telemetry -->
+    <div class="section">
+      <div class="section-title">Device telemetry</div>
+      <div class="telem-grid">
+        <div class="telem-card">
+          <div class="telem-label">Battery</div>
+          <div class="telem-value" id="battValue">--<span class="telem-unit">%</span></div>
+        </div>
+        <div class="telem-card">
+          <div class="telem-label">Voltage</div>
+          <div class="telem-value" id="voltValue">--<span class="telem-unit">V</span></div>
+        </div>
+        <div class="telem-card">
+          <div class="telem-label">Charge rate</div>
+          <div class="telem-value" id="crateValue">--<span class="telem-unit">%/hr</span></div>
+        </div>
+        <div class="telem-card">
+          <div class="telem-label">Signal</div>
+          <div class="telem-value" id="sigValue">--<span class="telem-unit">dBm</span></div>
+        </div>
+        <div class="telem-card">
+          <div class="telem-label">Transport</div>
+          <div class="telem-value" id="transportValue" style="font-size:16px">--</div>
+        </div>
+        <div class="telem-card">
+          <div class="telem-label">Boot count</div>
+          <div class="telem-value" id="bootValue">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location -->
+    <div class="section">
+      <div class="section-title">Last known position</div>
+      <div class="loc-row">
+        <span class="loc-key">lat</span>
+        <span class="loc-val" id="latValue">--</span>
+      </div>
+      <div class="loc-row">
+        <span class="loc-key">lon</span>
+        <span class="loc-val" id="lonValue">--</span>
+      </div>
+      <div class="loc-row">
+        <span class="loc-key">alt</span>
+        <span class="loc-val" id="altValue">--</span>
+      </div>
+      <div class="loc-row">
+        <span class="loc-key">speed</span>
+        <span class="loc-val" id="speedValue">--</span>
+      </div>
+      <div class="loc-row">
+        <span class="loc-key">sats</span>
+        <span class="loc-val" id="satsValue">--</span>
+      </div>
+      <div class="loc-row">
+        <span class="loc-key">updated</span>
+        <span class="loc-val" id="locTime">--</span>
+      </div>
+    </div>
+
+    <!-- Commands -->
+    <div class="section">
+      <div class="section-title">Commands</div>
+      <div class="cmd-row">
+        <button class="cmd-btn" onclick="sendCommand('locate')">Locate now</button>
+        <button class="cmd-btn" onclick="sendCommand('ping')">Ping</button>
+      </div>
+    </div>
+
+    <!-- Event log -->
+    <div class="section" style="flex:1">
+      <div class="section-title">Event log</div>
+      <ul class="log-list" id="logList"></ul>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================================
+// MQTT connection via WebSocket through nginx proxy
+// ============================================================================
+
+const BROKER_URL = 'wss://iot.gtpc.com.br/mqtt';
+const TOPICS = {
+  alert:    'elderguard/001/alert',
+  location: 'elderguard/001/location',
+  telemetry:'elderguard/001/telemetry',
+  status:   'elderguard/001/status',
+  command:  'elderguard/001/command',
+  debug:    'elderguard/001/debug',
+};
+
+let client;
+let map, marker, circle;
+
+// ---- DOM refs ----
+const $connStatus   = document.getElementById('connStatus');
+const $statusDot    = document.getElementById('statusDot');
+const $alertBanner  = document.getElementById('alertBanner');
+const $alertIcon    = document.getElementById('alertIcon');
+const $alertText    = document.getElementById('alertText');
+const $alertTime    = document.getElementById('alertTime');
+
+function initMqtt() {
+  client = mqtt.connect(BROKER_URL, {
+    username: 'dashboard',
+    password: 'changeme',  // Must match your Mosquitto passwd
+    clientId: 'dashboard-' + Math.random().toString(16).slice(2, 8),
+    clean: true,
+    reconnectPeriod: 5000,
+  });
+
+  client.on('connect', () => {
+    $connStatus.classList.add('connected');
+    $connStatus.querySelector('.dot').style.background = '';
+    $connStatus.innerHTML = '<div class="dot"></div> Connected';
+    addLog('MQTT connected to broker');
+
+    // Subscribe to all device topics
+    Object.values(TOPICS).forEach(t => {
+      if (t !== TOPICS.command) client.subscribe(t, { qos: 1 });
+    });
+  });
+
+  client.on('close', () => {
+    $connStatus.classList.remove('connected');
+    $connStatus.innerHTML = '<div class="dot"></div> Disconnected';
+  });
+
+  client.on('message', (topic, message) => {
+    const payload = message.toString();
+    let data;
+    try { data = JSON.parse(payload); } catch { data = payload; }
+
+    switch (topic) {
+      case TOPICS.alert:     handleAlert(data); break;
+      case TOPICS.location:  handleLocation(data); break;
+      case TOPICS.telemetry: handleTelemetry(data); break;
+      case TOPICS.status:    handleStatus(data); break;
+      case TOPICS.debug:     handleDebug(payload); break;
+    }
+  });
+}
+
+// ============================================================================
+// Message handlers
+// ============================================================================
+
+function handleAlert(d) {
+  // Ignore empty retained messages (from acknowledgement)
+  if (!d || !d.type) return;
+
+  const isPanic = d.type === 'panic';
+  const isFall  = d.type === 'fall';
+
+  $alertBanner.className = 'alert-banner visible ' + (isPanic ? 'panic' : isFall ? 'fall' : '');
+  $alertIcon.textContent = isPanic ? '🚨' : isFall ? '⚠️' : 'ℹ️';
+  $alertText.textContent = isPanic
+    ? 'PANIC BUTTON PRESSED — check on the wearer immediately'
+    : isFall
+    ? `FALL DETECTED — peak acceleration ${d.peak_accel?.toFixed(1) || '?'} m/s²`
+    : `Alert: ${d.type}`;
+  // Show device UTC timestamp, not browser local time
+  $alertTime.textContent = d.ts || new Date().toLocaleTimeString();
+
+  $statusDot.className = 'logo-dot alert';
+
+  if (d.lat && d.lon && d.lat !== 0) {
+    updateMap(d.lat, d.lon);
+  }
+
+  addLog(`ALERT: ${d.type} — bat ${d.batt}% @ ${d.ts || ''}`, isPanic ? 'alert-log' : 'fall-log');
+
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = isPanic ? 880 : 660;
+    gain.gain.value = 0.15;
+    osc.start(); osc.stop(ctx.currentTime + 0.4);
+  } catch {}
+}
+
+function handleLocation(d) {
+  document.getElementById('latValue').textContent = d.lat?.toFixed(6) ?? '--';
+  document.getElementById('lonValue').textContent = d.lon?.toFixed(6) ?? '--';
+  document.getElementById('altValue').textContent = d.alt != null ? `${d.alt.toFixed(0)} m` : '--';
+  document.getElementById('speedValue').textContent = d.speed_kmh != null ? `${d.speed_kmh.toFixed(1)} km/h` : '--';
+  document.getElementById('satsValue').textContent = d.sats ?? '--';
+  document.getElementById('locTime').textContent = d.ts || new Date().toLocaleTimeString();
+
+  if (d.lat && d.lon) updateMap(d.lat, d.lon);
+  addLog(`GPS: ${d.lat?.toFixed(4)}, ${d.lon?.toFixed(4)} ${d.speed_kmh?.toFixed(0) ?? '?'}km/h (${d.sats} sats) @ ${d.ts || ''}`);
+}
+
+function handleTelemetry(d) {
+  const $batt = document.getElementById('battValue');
+  $batt.innerHTML = `${d.batt_pct ?? '--'}<span class="telem-unit">%</span>`;
+  $batt.className = 'telem-value ' + (
+    (d.batt_pct ?? 100) > 50 ? 'ok' : (d.batt_pct ?? 100) > 20 ? 'warn' : 'danger'
+  );
+
+  const $volt = document.getElementById('voltValue');
+  const v = d.batt_v;
+  $volt.innerHTML = `${v != null ? v.toFixed(2) : '--'}<span class="telem-unit">V</span>`;
+  $volt.className = 'telem-value ' + (
+    (v ?? 4.0) > 3.7 ? 'ok' : (v ?? 4.0) > 3.5 ? 'warn' : 'danger'
+  );
+
+  // Charge/discharge rate — always show sign and label
+  const $crate = document.getElementById('crateValue');
+  const rate = d.charge_rate;
+  if (rate != null) {
+    const sign = rate >= 0 ? '+' : '';
+    let label, color;
+    if (rate > 0.5)       { label = 'charging'; color = 'ok'; }
+    else if (rate < -0.5) { label = 'drain';    color = rate < -10 ? 'danger' : 'warn'; }
+    else                  { label = 'idle';     color = 'ok'; }
+    $crate.innerHTML = `${sign}${rate.toFixed(1)}<span class="telem-unit">%/hr ${label}</span>`;
+    $crate.className = 'telem-value ' + color;
+  } else {
+    $crate.innerHTML = `--<span class="telem-unit">%/hr</span>`;
+  }
+
+  const csq = d.signal ?? 0;
+  const dbm = csq <= 0 ? '--' : csq >= 31 ? '-51' : (-113 + csq * 2).toString();
+  document.getElementById('sigValue').innerHTML = `${dbm}<span class="telem-unit">dBm</span>`;
+
+  document.getElementById('transportValue').textContent = d.transport ?? '--';
+  document.getElementById('bootValue').textContent = d.boot ?? '--';
+
+  const ts = d.ts || '';
+  addLog(`Telemetry: ${d.batt_pct}% ${v?.toFixed(2)}V ${rate != null ? (rate >= 0 ? '+' : '') + rate.toFixed(1) + '%/hr' : ''} via ${d.transport} @ ${ts}`);
+}
+
+function handleStatus(d) {
+  if (d.online) {
+    $statusDot.className = 'logo-dot online';
+    addLog('Device came online');
+  } else {
+    $statusDot.className = 'logo-dot';
+    addLog('Device went offline (LWT)');
+  }
+}
+
+function handleDebug(payload) {
+  // payload is a multi-line string from the device's boot log buffer
+  const lines = payload.split('\n').filter(l => l.trim().length > 0);
+  // Add a separator so you can tell where each boot's log starts
+  addLog('── device boot log ──');
+  lines.forEach(line => addLog(line.trim()));
+}
+
+// ============================================================================
+// Map
+// ============================================================================
+
+function initMap() {
+  map = L.map('map', {
+    center: [-23.55, -46.63],  // São Paulo default (adjust as needed)
+    zoom: 13,
+    zoomControl: false,
+  });
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(map);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+}
+
+function updateMap(lat, lon) {
+  if (!map) return;
+
+  // Fix Leaflet rendering after layout shifts
+  map.invalidateSize();
+
+  if (marker) {
+    marker.setLatLng([lat, lon]);
+    circle.setLatLng([lat, lon]);
+  } else {
+    marker = L.circleMarker([lat, lon], {
+      radius: 9,
+      color: '#d32f2f',
+      fillColor: '#e53935',
+      fillOpacity: 0.9,
+      weight: 2,
+    }).addTo(map);
+
+    circle = L.circle([lat, lon], {
+      radius: 50,
+      color: '#e53935',
+      fillColor: '#e53935',
+      fillOpacity: 0.1,
+      weight: 0.5,
+    }).addTo(map);
+  }
+
+  map.setView([lat, lon], 16, { animate: true });
+}
+
+// ============================================================================
+// Commands & UI
+// ============================================================================
+
+function sendCommand(cmd) {
+  if (client && client.connected) {
+    client.publish(TOPICS.command, cmd, { qos: 1 });
+    addLog(`Command sent: ${cmd}`);
+  } else {
+    addLog('Cannot send — MQTT disconnected');
+  }
+}
+
+function dismissAlert() {
+  // Local-only: hides the banner but the retained message stays on the broker.
+  // It will reappear on next page load unless acknowledged.
+  $alertBanner.classList.remove('visible');
+  $statusDot.className = 'logo-dot online';
+}
+
+function acknowledgeAlert() {
+  // Clears the retained alert message on the broker so it won't reappear.
+  // Also resets the status dot and banner.
+  if (client && client.connected) {
+    // Publish empty retained message to clear the stale alert
+    client.publish(TOPICS.alert, '', { qos: 1, retain: true });
+    // Reset status to online
+    client.publish(TOPICS.status, JSON.stringify({online: true}), { qos: 1, retain: true });
+    addLog('Alert acknowledged — retained message cleared');
+  } else {
+    addLog('Cannot acknowledge — MQTT disconnected');
+  }
+  $alertBanner.classList.remove('visible');
+  $statusDot.className = 'logo-dot online';
+}
+
+function addLog(msg, cls = '') {
+  const $list = document.getElementById('logList');
+  const li = document.createElement('li');
+  li.className = 'log-item ' + cls;
+  const time = new Date().toLocaleTimeString();
+  li.innerHTML = `<span class="log-time">${time}</span>${msg}`;
+  $list.prepend(li);
+  // Keep last 50 entries
+  while ($list.children.length > 50) $list.lastChild.remove();
+}
+
+// ---- Boot ----
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  initMqtt();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# /etc/mosquitto/acl
+# Access Control List for ElderGuard
+
+# Device user: can publish telemetry/alerts/location/debug, subscribe to commands
+user elderguard
+topic write elderguard/001/alert
+topic write elderguard/001/location
+topic write elderguard/001/telemetry
+topic write elderguard/001/status
+topic write elderguard/001/debug
+topic read  elderguard/001/command
+
+# Dashboard user: can read everything, send commands, acknowledge alerts
+user dashboard
+topic read  elderguard/#
+topic write elderguard/001/command
+topic write elderguard/001/alert
+topic write elderguard/001/status
