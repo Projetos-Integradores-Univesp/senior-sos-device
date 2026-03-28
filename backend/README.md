@@ -9,7 +9,7 @@ Para iniciar o servidor backend, executar o comando: uvicorn backend.main:app --
     1 - No terminal rodar: cd backend/migrations/
     2 - No terminal rodar: alembic init alembic
     3 - Editar o link do DB dentro do arquivo alembic.ini
-        3.1 - linha 90: sqlalchemy.url = sqlite:///database.db
+        3.1 - linha 90: sqlalchemy.url = sqlite:///../database.db
     4 - Editar o arquivo env.py
         4.1 - Acrescentar as linhas:
             import os, sys

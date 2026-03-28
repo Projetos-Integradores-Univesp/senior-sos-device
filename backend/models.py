@@ -7,7 +7,7 @@ from sqlalchemy_utils.types import ChoiceType
 
 # Conexão ado banco de dados
 # Passar link do banco de dados quando em produção aqui
-db = create_engine("sqlite:///database.db")
+db = create_engine("sqlite:///backend/database.db")
 
 # Base do banco de dados
 Base = declarative_base()
