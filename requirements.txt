@@ -6,3 +6,4 @@ python-multipart==0.0.22
 sqlalchemy==2.0.48
 uvicorn==0.42.0
 sqlalchemy_utils==0.42.1
+alembic==1.18.4
