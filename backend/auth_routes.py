@@ -1,6 +1,6 @@
-from fastapi import APIRouter
-from sqlalchemy.orm import sessionmaker
-from backend.models import db, User
+from fastapi import APIRouter, Depends
+from backend.models import User
+from backend.utils import get_session
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -13,14 +13,12 @@ async def home():
 
 
 @auth_router.post("/create_account")
-async def create_account(username: str, password: str):
-    # Criando uma seção no DB
-    Session = sessionmaker(bind=db)
-    session = Session()
+async def create_account(username: str, password: str, session=Depends(get_session)):
 
     # fazendo buscas no DB pela existência do nome de usuário
     username_exists_in_db = session.query(User).filter(User.username == username).first()
 
+    # Criando novo usuário se não existir
     if not username_exists_in_db:
         new_user = User(username, password)
         session.add(new_user)
