@@ -1,8 +1,9 @@
 fastapi==0.135.1
-passlib[bcrypt]==1.7.4
-python-dotenv==1.2.2
-python-jose[cryptography]==3.5.0
-python-multipart==0.0.22
+bcrypt==5.0.0
+# passlib[bcrypt]==1.7.4
+# python-dotenv==1.2.2
+# python-jose[cryptography]==3.5.0
+# python-multipart==0.0.22
 sqlalchemy==2.0.48
 uvicorn==0.42.0
 sqlalchemy_utils==0.42.1

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from backend.models import User
-from backend.utils import get_session
-from backend.main import bcrypt_context
+from backend.utils import get_db_session
+from backend.utils import generate_hash
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -14,14 +14,14 @@ async def home():
 
 
 @auth_router.post("/create_account")
-async def create_account(username: str, password: str, session=Depends(get_session)):
+async def create_account(username: str, password: str, session=Depends(get_db_session)):
 
     # fazendo buscas no DB pela existência do nome de usuário
     username_exists_in_db = session.query(User).filter(User.username == username).first()
 
     # Criando novo usuário se não existir
     if not username_exists_in_db:
-        password_hash = bcrypt_context.hash(password)
+        password_hash = generate_hash(password)
         new_user = User(username, password_hash)
         session.add(new_user)
         session.commit()
