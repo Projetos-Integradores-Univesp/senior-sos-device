@@ -27,3 +27,23 @@ Para iniciar o servidor backend, executar o comando: uvicorn backend.main:app --
             de: sqlalchemy_utils.types.choice.ChoiceType(length=255)
             para: sa.String(length=32)
     4 - Executar a migração com: alembic upgrade head
+
+# Rotas
+
+[X] POST   /users         --> para criar conta de novo usuário
+[ ] DELETE /users/me      --> para excluir conta (necessário autenticação)
+[ ] PUT    /users/me      --> para editar conta de usuário (necessário autenticação)
+ 
+[ ] POST   /auth/login    --> para fazer login (cria seção/token)
+[ ] POST   /auth/logout   --> para fazer logout (invalida seção/token)
+[ ] 
+[ ] GET    /devices       --> para listar dispositivos (necessário autenticação)
+[ ] POST   /devices       --> para adicionar dispositivos (necessário autenticação)
+[ ] PUT    /devices/{id}  --> para editar dispositivos (necessário autenticação + admin)
+[ ] DELETE /devices/{id}  --> para apagar dispositivo (necessário autenticação + admin)
+
+[ ] GET    /devices/{id}/users  --> para listar usuários com acesso ao dispositivo (necessário autenticação + admin)
+[ ] POST   /devices/{id}/users  --> para adicionar novo acesso de usuário ao disp (necessário autenticação + admin)
+[ ] DELETE /devices/{id}/users{usersId} --> para remover o acesso de um usuário ao dispositivo (autenticação + admin)
+
+[ ] GET    /devices/{id}/events --> para listar todos os eventos relacionados ao dispositivo (autenticação)
