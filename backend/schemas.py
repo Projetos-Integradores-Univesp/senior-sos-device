@@ -1,11 +1,20 @@
 from pydantic import BaseModel
-from typing import Optional
+
+# from typing import Optional
 
 
-class UserSchema(BaseModel):
+class UserCreate(BaseModel):
     username: str
     password: str
-    status: Optional[bool]
 
     class Config:
         from_attributes = True
+
+
+# class UserCreate(BaseModel):
+#     username: str
+#     password: str
+#     status: Optional[bool]
+#
+#     class Config:
+#         from_attributes = True

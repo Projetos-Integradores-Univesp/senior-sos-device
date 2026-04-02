@@ -36,7 +36,7 @@ class Session(Base):
     __tablename__ = "sessions"
 
     id = Column("id", Integer, primary_key=True, autoincrement=True)
-    user = Column("user", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     login_time = Column("login_time", DateTime, default=datetime.now())
     logout_time = Column("logout_time", DateTime)
 
@@ -50,7 +50,7 @@ class Device(Base):
     __tablename__ = "devices"
 
     id = Column("id", Integer, primary_key=True, autoincrement=True)
-    admin = Column("admin", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_admin = Column("user_admin", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     nickname = Column("nickname", String(128), unique=True, nullable=False)
     created_at = Column("created_at", DateTime, default=datetime.now())
 
@@ -67,7 +67,7 @@ class Event(Base):
     EVENTS_TYPES = (("BUTTON PRESSED", "BUTTON PRESSED"), ("FALL", "FALL"))
 
     id = Column("id", Integer, primary_key=True, autoincrement=True)
-    device = Column("device", ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
+    device_id = Column("device_id", ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
     type = Column("type", ChoiceType(EVENTS_TYPES))
     time = Column("created_at", DateTime, default=datetime.now())
 
@@ -81,8 +81,8 @@ class Have(Base):
     # Nome da tabela no banco de dados
     __tablename__ = "have"
 
-    user = Column("user", ForeignKey("users.id"), primary_key=True)
-    device = Column("device", ForeignKey("devices.id"), primary_key=True)
+    user_id = Column("user_id", ForeignKey("users.id"), primary_key=True)
+    device_id = Column("device_id", ForeignKey("devices.id"), primary_key=True)
 
     def __init__(self, user: User, device: Device):
         self.user = user

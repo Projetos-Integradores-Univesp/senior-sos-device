@@ -1,8 +1,8 @@
 """initial_migration
 
-Revision ID: 081430b87798
+Revision ID: 6aee424ed5a5
 Revises:
-Create Date: 2026-03-27 22:43:51.271751
+Create Date: 2026-04-02 16:24:40.127764
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "081430b87798"
+revision: str = "6aee424ed5a5"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,44 +35,44 @@ def upgrade() -> None:
     op.create_table(
         "devices",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("admin", sa.Integer(), nullable=False),
+        sa.Column("user_admin", sa.Integer(), nullable=False),
         sa.Column("nickname", sa.String(length=128), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["admin"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_admin"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("nickname"),
     )
     op.create_table(
         "sessions",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("user", sa.Integer(), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("login_time", sa.DateTime(), nullable=True),
         sa.Column("logout_time", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["user"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "events",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("device", sa.Integer(), nullable=False),
+        sa.Column("device_id", sa.Integer(), nullable=False),
         sa.Column("type", sa.String(length=32), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["device"], ["devices.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["device_id"], ["devices.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "have",
-        sa.Column("user", sa.Integer(), nullable=False),
-        sa.Column("device", sa.Integer(), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("device_id", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["device"],
+            ["device_id"],
             ["devices.id"],
         ),
         sa.ForeignKeyConstraint(
-            ["user"],
+            ["user_id"],
             ["users.id"],
         ),
-        sa.PrimaryKeyConstraint("user", "device"),
+        sa.PrimaryKeyConstraint("user_id", "device_id"),
     )
     # ### end Alembic commands ###
 
