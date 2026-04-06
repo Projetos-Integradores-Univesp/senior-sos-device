@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.models import User
 from backend.models import Session as user_session_registration
-from backend.utils import get_db_session, password_verification
+from backend.utils import get_db_session, password_verification, token
 from backend.schemas import UserCredentials
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -24,7 +24,16 @@ async def login(user_credentials: UserCredentials, session: Session = Depends(ge
             session.commit()
 
             # Criar token para seção...
-            return {"detail": {"message": "User successfully logged in.", "login": True, "token": "token_aqui..."}}
+            access_token = token(user.id)
+
+            return {
+                "detail": {
+                    "message": "User successfully logged in.",
+                    "access_token": access_token,
+                    "token_type": "Beaver",
+                    "login": True,
+                }
+            }
         else:
             raise HTTPException(status_code=400, detail={"message": "Incorrect password.", "login": False})
     else:

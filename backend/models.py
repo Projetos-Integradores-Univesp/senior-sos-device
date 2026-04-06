@@ -4,10 +4,11 @@ from sqlalchemy import Integer, String, DateTime, Boolean
 from sqlalchemy.orm import declarative_base
 from sqlalchemy_utils.types import ChoiceType
 from datetime import datetime
+from backend.settings import MODELS_DB_LINK
 
-# Conexão ado banco de dados
-# Passar link do banco de dados quando em produção aqui
-db = create_engine("sqlite:///backend/database.db")
+
+# Link do banco de dados
+db = create_engine(MODELS_DB_LINK)
 
 # Base do banco de dados
 Base = declarative_base()

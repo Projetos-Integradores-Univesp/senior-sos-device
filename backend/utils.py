@@ -2,15 +2,6 @@ from backend.models import db
 from sqlalchemy.orm import sessionmaker
 import bcrypt
 
-# from dotenv import load_dotenv
-# import os
-
-# Carregando variáveis de ambiente, inclusive do arquivo .env
-# load_dotenv()
-
-# Carregando a chave secreta do arquivo .env
-# SECRET_KEY = os.getenv("SECRET_KEY")
-
 
 # Função que inicia uma nova seção no DB e sempre fecha a mesma
 def get_db_session():
@@ -35,3 +26,8 @@ def password_verification(password: str, password_hash: str) -> bool:
         return True
     else:
         return False
+
+
+# Função que retorna um token de acesso
+def token(user_id: int) -> str:
+    pass
