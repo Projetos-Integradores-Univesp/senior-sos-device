@@ -1,9 +1,12 @@
 from dotenv import load_dotenv
 import os
 
+# Em produção mudar para False
+DEBUG = True
 
-# Carregando variáveis de ambiente, inclusive do arquivo .env
-load_dotenv()
+# Carregando variáveis do arquivo .env
+if DEBUG:
+    load_dotenv()
 
 # Carregando constantes
 SECRET_KEY = os.getenv("SECRET_KEY")
