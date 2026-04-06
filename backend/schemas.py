@@ -3,7 +3,7 @@ from pydantic import BaseModel
 # from typing import Optional
 
 
-class UserCreate(BaseModel):
+class UserCredentials(BaseModel):
     username: str
     password: str
 
@@ -11,7 +11,7 @@ class UserCreate(BaseModel):
         from_attributes = True
 
 
-# class UserCreate(BaseModel):
+# class UserCredentials(BaseModel):
 #     username: str
 #     password: str
 #     status: Optional[bool]
