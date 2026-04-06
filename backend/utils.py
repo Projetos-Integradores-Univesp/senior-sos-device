@@ -27,3 +27,11 @@ def generate_hash(password: str) -> str:
     password_bytes = password.encode("utf-8")
     hash_bytes = bcrypt.hashpw(password_bytes, bcrypt.gensalt(rounds=12))
     return hash_bytes.decode("utf-8")
+
+
+# Função que verifica a igualdade da senhas fornecidas
+def password_verification(password: str, password_hash: str) -> bool:
+    if bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
+        return True
+    else:
+        return False
