@@ -18,19 +18,19 @@ async def login(user_credentials: UserCredentials, session: Session = Depends(ge
     if user:
         # Verificação da senha
         if password_verification(user_credentials.password, user.password_hash):
-            # Adicionar seção no DB
+            # Criar token para seção...
+            access_token = token(user.id)
+
+            # Registrando seção do usuário no DB
             new_session = user_session_registration(user.id)
             session.add(new_session)
             session.commit()
-
-            # Criar token para seção...
-            access_token = token(user.id)
 
             return {
                 "detail": {
                     "message": "User successfully logged in.",
                     "access_token": access_token,
-                    "token_type": "Beaver",
+                    "token_type": "Bearer",
                     "login": True,
                 }
             }

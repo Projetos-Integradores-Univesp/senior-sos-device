@@ -1,6 +1,9 @@
-from backend.models import db
 from sqlalchemy.orm import sessionmaker
+from backend.models import db
+from backend.settings import ALGORITHM, ACCESS_TOKEN_EXPIRATION_MINUTES, SECRET_KEY
+from datetime import datetime, timezone, timedelta
 import bcrypt
+import jwt
 
 
 # Função que inicia uma nova seção no DB e sempre fecha a mesma
@@ -28,6 +31,8 @@ def password_verification(password: str, password_hash: str) -> bool:
         return False
 
 
-# Função que retorna um token de acesso
+# Função que retorna um token JWT de acesso
 def token(user_id: int) -> str:
-    pass
+    expiration_time = (datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRATION_MINUTES)).timestamp()
+    payload = {"sub": user_id, "expiration_time": expiration_time}
+    return jwt.encode(payload, SECRET_KEY, ALGORITHM)
