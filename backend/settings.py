@@ -11,7 +11,7 @@ if DEBUG:
 # Carregando constantes
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRY_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRY_MINUTES")
+ACCESS_TOKEN_EXPIRATION_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRATION_MINUTES"))
 
 # Configuração dos links do DB para models.py e alembic.ini
 MODELS_DB_LINK = "sqlite:///backend/database.db"

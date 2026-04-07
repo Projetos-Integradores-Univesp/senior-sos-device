@@ -3,7 +3,7 @@ from sqlalchemy import Column, ForeignKey
 from sqlalchemy import Integer, String, DateTime, Boolean
 from sqlalchemy.orm import declarative_base
 from sqlalchemy_utils.types import ChoiceType
-from datetime import datetime
+from datetime import datetime, timezone
 from backend.settings import MODELS_DB_LINK
 
 
@@ -28,7 +28,7 @@ class User(Base):
     def __init__(self, username, password_hash, status=True):
         self.username = username
         self.password_hash = password_hash
-        self.created_at = datetime.now()
+        self.created_at = datetime.now(timezone.utc)
         self.status = status
 
 
@@ -44,7 +44,7 @@ class Session(Base):
 
     def __init__(self, user_id: User):
         self.user_id = user_id
-        self.login_time = datetime.now()
+        self.login_time = datetime.now(timezone.utc)
 
 
 # Tabela Devices
@@ -60,7 +60,7 @@ class Device(Base):
     def __init__(self, user_id_admin: User, nickname):
         self.user_id_admin = user_id_admin
         self.nickname = nickname
-        self.created_at = datetime.now()
+        self.created_at = datetime.now(timezone.utc)
 
 
 # Tabela Events
@@ -78,7 +78,7 @@ class Event(Base):
     def __init__(self, device_id: Device, type="BUTTON PRESSED"):
         self.device_id = device_id
         self.type = type
-        self.time = datetime.now()
+        self.time = datetime.now(timezone.utc)
 
 
 # Tabela Have
