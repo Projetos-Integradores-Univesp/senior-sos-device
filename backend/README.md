@@ -36,7 +36,7 @@ Para iniciar o servidor backend, executar o comando: uvicorn backend.main:app --
  
 [X] POST   /auth/login    --> para fazer login (cria seção/token)
 [ ] POST   /auth/logout   --> para fazer logout (invalida seção/token)
-[ ] GET    /auth/refresh  --> para fazer refresh da seção (com o refresh_token)
+[X] GET    /auth/refresh  --> para fazer refresh da seção (com o refresh_token)
 
 [ ] GET    /devices       --> para listar dispositivos (necessário autenticação)
 [ ] POST   /devices       --> para adicionar dispositivos (necessário autenticação)

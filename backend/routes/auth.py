@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.models import User
 from backend.models import Session as user_session_registration
-from backend.utils import get_db_session, password_verification, token
+from backend.utils import get_db_session, password_verification, token, token_validation
 from backend.schemas import UserCredentials
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -20,7 +20,7 @@ async def login(user_credentials: UserCredentials, session: Session = Depends(ge
         if password_verification(user_credentials.password, user.password_hash):
             # Criar tokens para a seção...
             access_token = token(user.id)
-            refresh_token = token(user.id, 60)
+            refresh_token = token(user.id, 60 * 24)  # 1 dia
 
             # Registrando seção do usuário no DB
             new_session = user_session_registration(user.id)
@@ -50,5 +50,10 @@ async def logout():
 
 
 @auth_router.get("/refresh")
-async def refresh():
-    """Rota para fazer refresh da seção."""
+async def refresh(payload: dict = Depends(token_validation)):
+    """Rota para fazer refresh da seção e enviar um novo "access_token"."""
+
+    # Criando novo token
+    access_token = token(int(payload["sub"]))
+
+    return {"detail": {"access_token": access_token, "token_type": "Bearer"}}
