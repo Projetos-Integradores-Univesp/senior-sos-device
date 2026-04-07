@@ -53,7 +53,7 @@ class Device(Base):
     __tablename__ = "devices"
 
     id = Column("id", Integer, primary_key=True, autoincrement=True)
-    user_id_admin = Column("user_admin", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id_admin = Column("user_id_admin", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     nickname = Column("nickname", String(128), unique=True, nullable=False)
     created_at = Column("created_at", DateTime)
 
