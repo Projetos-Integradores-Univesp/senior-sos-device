@@ -18,8 +18,9 @@ async def login(user_credentials: UserCredentials, session: Session = Depends(ge
     if user:
         # Verificação da senha
         if password_verification(user_credentials.password, user.password_hash):
-            # Criar token para seção...
+            # Criar tokens para a seção...
             access_token = token(user.id)
+            refresh_token = token(user.id, 60)
 
             # Registrando seção do usuário no DB
             new_session = user_session_registration(user.id)
@@ -30,6 +31,7 @@ async def login(user_credentials: UserCredentials, session: Session = Depends(ge
                 "detail": {
                     "message": "User successfully logged in.",
                     "access_token": access_token,
+                    "refresh_token": refresh_token,
                     "token_type": "Bearer",
                     "login": True,
                 }
@@ -38,3 +40,15 @@ async def login(user_credentials: UserCredentials, session: Session = Depends(ge
             raise HTTPException(status_code=400, detail={"message": "Incorrect password.", "login": False})
     else:
         raise HTTPException(status_code=400, detail={"message": "User not found.", "login": False})
+
+
+@auth_router.post("/logout")
+async def logout():
+    """Rota para fazer logout de usuário."""
+
+    pass
+
+
+@auth_router.get("/refresh")
+async def refresh():
+    """Rota para fazer refresh da seção."""
