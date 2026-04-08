@@ -6,12 +6,12 @@ DEBUG = True
 
 # Carregando variáveis do arquivo .env
 if DEBUG:
-    load_dotenv()
+    load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 # Carregando constantes
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRATION_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRATION_MINUTES"))
+ACCESS_TOKEN_EXPIRATION_MINUTES = float(os.getenv("ACCESS_TOKEN_EXPIRATION_MINUTES"))
 
 # Configuração dos links do DB para models.py e alembic.ini
 MODELS_DB_LINK = "sqlite:///backend/database.db"

@@ -34,7 +34,7 @@ def password_verification(password: str, password_hash: str) -> bool:
 
 
 # Função que retorna um token JWT de acesso
-def token(user_id: int, expiration_minutes=ACCESS_TOKEN_EXPIRATION_MINUTES) -> str:
+def token(user_id: int, expiration_minutes: float = ACCESS_TOKEN_EXPIRATION_MINUTES) -> str:
     expiration_time = (datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)).timestamp()
     payload = {"user_id": user_id, "expiration_time": expiration_time}
     return jwt.encode(payload, SECRET_KEY, ALGORITHM)

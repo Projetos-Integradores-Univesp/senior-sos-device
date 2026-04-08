@@ -9,3 +9,5 @@ uvicorn==0.42.0
 sqlalchemy_utils==0.42.1
 alembic==1.18.4
 pyjwt==2.12.1
+requests==2.33.1
+dotenv==0.9.9
