@@ -54,6 +54,6 @@ async def refresh(payload: dict = Depends(token_validation)):
     """Rota para fazer refresh da seção e enviar um novo "access_token"."""
 
     # Criando novo token
-    access_token = token(int(payload["sub"]))
+    access_token = token(int(payload["user_id"]))
 
     return {"detail": {"access_token": access_token, "token_type": "Bearer"}}
