@@ -1,5 +1,35 @@
 import 'package:flutter/material.dart';
 
+// Modelo para dispositivo
+class Device {
+  final String id;
+  final String name;
+  final String deviceId;
+  final DateTime dateAdded;
+
+  Device({
+    required this.id,
+    required this.name,
+    required this.deviceId,
+    required this.dateAdded,
+  });
+
+  // Criar uma cópia do dispositivo com campos modificados
+  Device copyWith({
+    String? id,
+    String? name,
+    String? deviceId,
+    DateTime? dateAdded,
+  }) {
+    return Device(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      deviceId: deviceId ?? this.deviceId,
+      dateAdded: dateAdded ?? this.dateAdded,
+    );
+  }
+}
+
 void main() {
   runApp(const MyApp());
 }
@@ -215,10 +245,24 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               onPressed: () {
-                // Aqui você pode adicionar a lógica de login
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Fazendo login...')),
-                );
+                if (_emailController.text.isNotEmpty && _senhaController.text.isNotEmpty) {
+                  // Simular login bem-sucedido
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Fazendo login...')),
+                  );
+                  // Navegar para a página de gerenciamento de dispositivos
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DeviceManagementPage(
+                        userEmail: _emailController.text,
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Por favor, preencha todos os campos')),
+                  );
+                }
               },
               child: const Text(
                 'Entrar',
@@ -303,6 +347,299 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// Página de Gerenciamento de Dispositivos
+class DeviceManagementPage extends StatefulWidget {
+  final String userEmail;
+
+  const DeviceManagementPage({
+    Key? key,
+    required this.userEmail,
+  }) : super(key: key);
+
+  @override
+  State<DeviceManagementPage> createState() => _DeviceManagementPageState();
+}
+
+class _DeviceManagementPageState extends State<DeviceManagementPage> {
+  List<Device> devices = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Meus Aparelhos',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1a3a52),
+        elevation: 2,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text(
+                  'Usuário: ${widget.userEmail}',
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF1a3a52)),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: devices.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.devices_other, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'Nenhum aparelho cadastrado',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Clique no botão + para adicionar um novo',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    itemCount: devices.length,
+                    itemBuilder: (context, index) {
+                      final device = devices[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                        elevation: 3,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16.0),
+                          leading: const Icon(Icons.devices, color: Color(0xFF1a3a52), size: 32),
+                          title: Text(
+                            device.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 8),
+                              Text('Device ID: ${device.deviceId}'),
+                              Text('Adicionado em: ${device.dateAdded.day}/${device.dateAdded.month}/${device.dateAdded.year}'),
+                            ],
+                          ),
+                          trailing: SizedBox(
+                            width: 100,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () => _showAddEditDialog(device),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _deleteDevice(device.id),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddEditDialog(null),
+        backgroundColor: const Color(0xFF1a3a52),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _showAddEditDialog(Device? device) {
+    showDialog(
+      context: context,
+      builder: (context) => AddEditDeviceDialog(
+        device: device,
+        onSave: (name, deviceId) {
+          setState(() {
+            if (device != null) {
+              // Editar dispositivo existente
+              final index = devices.indexWhere((d) => d.id == device.id);
+              if (index != -1) {
+                devices[index] = devices[index].copyWith(name: name, deviceId: deviceId);
+              }
+            } else {
+              // Adicionar novo dispositivo
+              devices.add(Device(
+                id: DateTime.now().toString(),
+                name: name,
+                deviceId: deviceId,
+                dateAdded: DateTime.now(),
+              ));
+            }
+          });
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(device != null ? 'Aparelho atualizado!' : 'Aparelho adicionado!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _deleteDevice(String deviceId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remover Aparelho'),
+        content: const Text('Tem certeza que deseja remover este aparelho?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                devices.removeWhere((d) => d.id == deviceId);
+              });
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Aparelho removido!'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            child: const Text('Remover', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Dialog para adicionar/editar dispositivo
+class AddEditDeviceDialog extends StatefulWidget {
+  final Device? device;
+  final Function(String name, String deviceId) onSave;
+
+  const AddEditDeviceDialog({
+    Key? key,
+    this.device,
+    required this.onSave,
+  }) : super(key: key);
+
+  @override
+  State<AddEditDeviceDialog> createState() => _AddEditDeviceDialogState();
+}
+
+class _AddEditDeviceDialogState extends State<AddEditDeviceDialog> {
+  late TextEditingController _nameController;
+  late TextEditingController _deviceIdController;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.device?.name ?? '');
+    _deviceIdController = TextEditingController(text: widget.device?.deviceId ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _deviceIdController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.device != null ? 'Editar Aparelho' : 'Adicionar Aparelho'),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Nome do Aparelho',
+                  hintText: 'Ex: Relógio SOS',
+                  prefixIcon: const Icon(Icons.devices),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, digite o nome do aparelho';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _deviceIdController,
+                decoration: InputDecoration(
+                  labelText: 'Device ID',
+                  hintText: 'Ex: DEV-12345-ABCDE',
+                  prefixIcon: const Icon(Icons.qr_code),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, digite o Device ID';
+                  }
+                  if (value.length < 5) {
+                    return 'Device ID deve ter pelo menos 5 caracteres';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1a3a52),
+          ),
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              widget.onSave(
+                _nameController.text,
+                _deviceIdController.text,
+              );
+            }
+          },
+          child: const Text('Salvar', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }
