@@ -44,23 +44,17 @@ async def login(user_credentials: UserCredentials, session: Session = Depends(ge
 
 
 @auth_router.post("/login-swagger")
-async def login_swagger(user_credentials: OA2PRF = Depends(), session: Session = Depends(get_db_session)):
+async def login_swagger(form: OA2PRF = Depends(), session: Session = Depends(get_db_session)):
     """Rota para login de usuário pelo botão Authorize do Swagger."""
 
     # fazendo buscas no DB pela existência do nome de usuário
-    user = session.query(User).filter(User.username == user_credentials.username).first()
+    user = session.query(User).filter(User.username == form.username).first()
 
     if user:
         # Verificação da senha
-        if password_verification(user_credentials.password, user.password_hash):
+        if password_verification(form.password, user.password_hash):
             # Cria token para a seção...
             access_token = token(user.id)
-
-            # Registrando seção do usuário no DB
-            new_session = user_session_registration(user.id)
-            session.add(new_session)
-            session.commit()
-
             return {"access_token": access_token, "token_type": "Bearer"}
         else:
             raise HTTPException(status_code=400)
