@@ -37,7 +37,7 @@ Após o servidor estar funcionando, acessar pelo navegador: http://127.0.0.1:800
  
 [X] POST   /auth/login         --> para fazer login (cria seção/token)
 [X] POST   /auth/login-swagger --> para fazer login utilizando o Swagger apenas para teste (cria seção/token)
-[ ] POST   /auth/logout        --> para fazer logout (invalida seção/token)
+[X] POST   /auth/logout        --> para fazer logout (invalida seção/token)
 [X] GET    /auth/refresh       --> para fazer refresh da seção (com o refresh_token)
 
 [ ] GET    /devices       --> para listar dispositivos (necessário autenticação)
