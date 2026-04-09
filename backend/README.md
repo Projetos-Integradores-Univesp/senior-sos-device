@@ -1,6 +1,7 @@
 # Comandos para iniciar o servidor
 
 Para iniciar o servidor backend, executar o comando: uvicorn backend.main:app --reload
+Após o servidor estar funcionando, acessar pelo navegador: http://127.0.0.1:8000/docs (Swagger)
 
 # Para fazer migrações, seguir os passos:
 
@@ -34,9 +35,10 @@ Para iniciar o servidor backend, executar o comando: uvicorn backend.main:app --
 [ ] DELETE /users/me      --> para excluir conta (necessário autenticação)
 [ ] PUT    /users/me      --> para editar conta de usuário (necessário autenticação)
  
-[X] POST   /auth/login    --> para fazer login (cria seção/token)
-[ ] POST   /auth/logout   --> para fazer logout (invalida seção/token)
-[X] GET    /auth/refresh  --> para fazer refresh da seção (com o refresh_token)
+[X] POST   /auth/login         --> para fazer login (cria seção/token)
+[X] POST   /auth/login-swagger --> para fazer login utilizando o Swagger (cria seção/token)
+[ ] POST   /auth/logout        --> para fazer logout (invalida seção/token)
+[X] GET    /auth/refresh       --> para fazer refresh da seção (com o refresh_token)
 
 [ ] GET    /devices       --> para listar dispositivos (necessário autenticação)
 [ ] POST   /devices       --> para adicionar dispositivos (necessário autenticação)

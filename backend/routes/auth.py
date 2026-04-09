@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm as OA2PRF
 from sqlalchemy.orm import Session
 from backend.models import User
 from backend.models import Session as user_session_registration
@@ -42,6 +43,31 @@ async def login(user_credentials: UserCredentials, session: Session = Depends(ge
         raise HTTPException(status_code=400, detail={"message": "User not found.", "login": False})
 
 
+@auth_router.post("/login-swagger")
+async def login_swagger(user_credentials: OA2PRF = Depends(), session: Session = Depends(get_db_session)):
+    """Rota para login de usuário pelo botão Authorize do Swagger."""
+
+    # fazendo buscas no DB pela existência do nome de usuário
+    user = session.query(User).filter(User.username == user_credentials.username).first()
+
+    if user:
+        # Verificação da senha
+        if password_verification(user_credentials.password, user.password_hash):
+            # Cria token para a seção...
+            access_token = token(user.id)
+
+            # Registrando seção do usuário no DB
+            new_session = user_session_registration(user.id)
+            session.add(new_session)
+            session.commit()
+
+            return {"access_token": access_token, "token_type": "Bearer"}
+        else:
+            raise HTTPException(status_code=400)
+    else:
+        raise HTTPException(status_code=400)
+
+
 @auth_router.post("/logout")
 async def logout():
     """Rota para fazer logout de usuário."""
@@ -50,10 +76,20 @@ async def logout():
 
 
 @auth_router.get("/refresh")
-async def refresh(payload: dict = Depends(token_validation)):
-    """Rota para fazer refresh da seção e enviar um novo "access_token"."""
+async def refresh(user: User = Depends(token_validation)):
+    """
+    Rota para fazer refresh da seção e receber um novo "access_token".
+    Necessário enviar o header nessa requisição:
+
+        headers = {
+            "Authorization": "Bearer SEU_TOKEN_AQUI",
+            "Content-Type": "application/json"
+        }
+
+    Em "SEU_TOKEN_AQUI" substituir pelo "refresh_token" do usuário.
+    """
 
     # Criando novo token
-    access_token = token(int(payload["user_id"]))
+    access_token = token(user.id)
 
-    return {"detail": {"access_token": access_token, "token_type": "Bearer"}}
+    return {"access_token": access_token, "token_type": "Bearer"}
