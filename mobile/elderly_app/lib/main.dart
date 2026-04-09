@@ -1,5 +1,27 @@
 import 'package:flutter/material.dart';
 
+// Enum para tipo de alerta
+enum AlertSeverity { info, warning, error }
+
+// Modelo para alerta
+class Alert {
+  final String id;
+  final String title;
+  final String message;
+  final DateTime timestamp;
+  final String deviceName;
+  final AlertSeverity severity;
+
+  Alert({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.timestamp,
+    required this.deviceName,
+    required this.severity,
+  });
+}
+
 // Modelo para dispositivo
 class Device {
   final String id;
@@ -365,15 +387,30 @@ class DeviceManagementPage extends StatefulWidget {
   State<DeviceManagementPage> createState() => _DeviceManagementPageState();
 }
 
-class _DeviceManagementPageState extends State<DeviceManagementPage> {
+class _DeviceManagementPageState extends State<DeviceManagementPage>
+    with SingleTickerProviderStateMixin {
   List<Device> devices = [];
+  List<Alert> alerts = [];
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Meus Aparelhos',
+          'Gerenciador SOS',
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: const Color(0xFF1a3a52),
@@ -382,92 +419,287 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(
+              text: 'Aparelhos',
+              icon: Icon(Icons.devices),
+              iconMargin: EdgeInsets.only(bottom: 6),
+            ),
+            Tab(
+              text: 'Alertas',
+              icon: Icon(Icons.notifications),
+              iconMargin: EdgeInsets.only(bottom: 6),
+            ),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text(
-                  'Usuário: ${widget.userEmail}',
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF1a3a52)),
-                ),
+          // Aba de Aparelhos
+          _buildDevicesTab(),
+          // Aba de Alertas
+          _buildAlertsTab(),
+        ],
+      ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton(
+              onPressed: () => _showAddEditDialog(null),
+              backgroundColor: const Color(0xFF1a3a52),
+              child: const Icon(Icons.add),
+            )
+          : FloatingActionButton(
+              onPressed: () => _simulateAlert(),
+              backgroundColor: const Color(0xFF1a3a52),
+              tooltip: 'Simular alerta',
+              child: const Icon(Icons.notifications_active),
+            ),
+    );
+  }
+
+  Widget _buildDevicesTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                'Usuário: ${widget.userEmail}',
+                style: const TextStyle(fontSize: 14, color: Color(0xFF1a3a52)),
               ),
             ),
           ),
-          Expanded(
-            child: devices.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.devices_other, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'Nenhum aparelho cadastrado',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+        Expanded(
+          child: devices.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.devices_other, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'Nenhum aparelho cadastrado',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Clique no botão + para adicionar um novo',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  itemCount: devices.length,
+                  itemBuilder: (context, index) {
+                    final device = devices[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                      elevation: 3,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16.0),
+                        leading: const Icon(Icons.devices, color: Color(0xFF1a3a52), size: 32),
+                        title: Text(
+                          device.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Clique no botão + para adicionar um novo',
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Text('Device ID: ${device.deviceId}'),
+                            Text('Adicionado em: ${device.dateAdded.day}/${device.dateAdded.month}/${device.dateAdded.year}'),
+                          ],
                         ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    itemCount: devices.length,
-                    itemBuilder: (context, index) {
-                      final device = devices[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-                        elevation: 3,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(16.0),
-                          leading: const Icon(Icons.devices, color: Color(0xFF1a3a52), size: 32),
-                          title: Text(
-                            device.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        trailing: SizedBox(
+                          width: 100,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              const SizedBox(height: 8),
-                              Text('Device ID: ${device.deviceId}'),
-                              Text('Adicionado em: ${device.dateAdded.day}/${device.dateAdded.month}/${device.dateAdded.year}'),
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _showAddEditDialog(device),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteDevice(device.id),
+                              ),
                             ],
                           ),
-                          trailing: SizedBox(
-                            width: 100,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () => _showAddEditDialog(device),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _deleteDevice(device.id),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAlertsTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total de alertas: ${alerts.length}',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1a3a52)),
+              ),
+              if (alerts.isNotEmpty)
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => alerts.clear());
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Alertas limpos'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.delete_sweep, color: Colors.red),
+                  label: const Text('Limpar', style: TextStyle(color: Colors.red)),
+                ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddEditDialog(null),
-        backgroundColor: const Color(0xFF1a3a52),
-        child: const Icon(Icons.add),
+        ),
+        Expanded(
+          child: alerts.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.notifications_none, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'Nenhum alerta recebido',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Os alertas dos seus aparelhos aparecerão aqui',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  itemCount: alerts.length,
+                  itemBuilder: (context, index) {
+                    final alert = alerts[index];
+                    final color = _getAlertColor(alert.severity);
+                    final icon = _getAlertIcon(alert.severity);
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                      elevation: 2,
+                      color: color.withOpacity(0.1),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16.0),
+                        leading: Icon(icon, color: color, size: 32),
+                        title: Text(
+                          alert.title,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Text(alert.message),
+                            const SizedBox(height: 6),
+                            Text('Dispositivo: ${alert.deviceName}', style: const TextStyle(fontSize: 12)),
+                            Text(
+                              'Hora: ${alert.timestamp.hour}:${alert.timestamp.minute.toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () {
+                            setState(() => alerts.removeAt(index));
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Color _getAlertColor(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.info:
+        return Colors.blue;
+      case AlertSeverity.warning:
+        return Colors.orange;
+      case AlertSeverity.error:
+        return Colors.red;
+    }
+  }
+
+  IconData _getAlertIcon(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.info:
+        return Icons.info;
+      case AlertSeverity.warning:
+        return Icons.warning;
+      case AlertSeverity.error:
+        return Icons.error;
+    }
+  }
+
+  void _simulateAlert() {
+    if (devices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Adicione um aparelho primeiro'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final severities = [AlertSeverity.info, AlertSeverity.warning, AlertSeverity.error];
+    final messages = [
+      'Bateria baixa',
+      'SOS acionado',
+      'Conexão perdida',
+      'Localização atualizada',
+      'Modo de emergência ativado',
+      'Sensor de queda detectado',
+    ];
+
+    setState(() {
+      alerts.insert(
+        0,
+        Alert(
+          id: DateTime.now().toString(),
+          title: messages[(messages.length * DateTime.now().microsecond) ~/ 999999],
+          message: 'Ação necessária no seu aparelho',
+          timestamp: DateTime.now(),
+          deviceName: devices[(devices.length * DateTime.now().microsecond) ~/ 999999].name,
+          severity: severities[(severities.length * DateTime.now().microsecond) ~/ 999999],
+        ),
+      );
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Novo alerta recebido!'),
+        backgroundColor: Colors.blue,
       ),
     );
   }
