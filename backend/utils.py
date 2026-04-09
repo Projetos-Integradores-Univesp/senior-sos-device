@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer as OA2PB
-from sqlalchemy.orm import sessionmaker
-from backend.models import db
+from sqlalchemy.orm import sessionmaker, Session
+from backend.models import db, User
 from backend.settings import ALGORITHM, ACCESS_TOKEN_EXPIRATION_MINUTES, SECRET_KEY
 from datetime import datetime, timezone, timedelta
 import bcrypt
@@ -41,10 +41,14 @@ def token(user_id: int, expiration_minutes: float = ACCESS_TOKEN_EXPIRATION_MINU
 
 
 # Função que verifica a validade do token e retorna um "payload" decodificado
-def token_validation(token: str = Depends(OA2PB(tokenUrl="auth/login"))):
+def token_validation(
+    token: str = Depends(OA2PB(tokenUrl="auth/login-swagger")), session: Session = Depends(get_db_session)
+) -> User:
     try:
         payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
-        return payload
+        user_id = payload["user_id"]
+        user = session.query(User).filter(User.id == user_id).first()
+        return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired.")
     except jwt.InvalidTokenError:
