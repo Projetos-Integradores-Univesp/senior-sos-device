@@ -36,24 +36,22 @@ Após o servidor estar funcionando, acessar pelo navegador: <http://127.0.0.1:80
 ## Rotas
 
 ### users
-> - [x] ***POST   /users***         --> para criar conta de novo usuário
-> - [ ] ***DELETE /users/me***      --> para excluir conta (necessário autenticação)
-> - [ ] ***PUT    /users/me***      --> para editar conta de usuário (necessário autenticação)
+- [x] ***POST   /users***         --> para criar conta de novo usuário
+- [ ] ***DELETE /users/me***      --> para excluir conta (necessário autenticação)
+- [ ] ***PUT    /users/me***      --> para editar conta de usuário (necessário autenticação)
 
 ### auth
-> - [x] ***POST   /auth/login***         --> para fazer login (cria seção/token)
-> - [x] ***POST   /auth/login-swagger*** --> para fazer login utilizando o Swagger apenas para teste (cria seção/token)
-> - [x] ***POST   /auth/logout***        --> para fazer logout (invalida seção/token)
-> - [x] ***GET    /auth/refresh***       --> para fazer refresh da seção (com o refresh_token)
+- [x] ***POST   /auth/login***         --> para fazer login (cria seção/token)
+- [x] ***POST   /auth/login-swagger*** --> para fazer login utilizando o Swagger apenas para teste (cria seção/token)
+- [x] ***POST   /auth/logout***        --> para fazer logout (invalida seção/token)
+- [x] ***GET    /auth/refresh***       --> para fazer refresh da seção (com o refresh_token)
 
 ### devices
-> - [ ] ***GET    /devices***       --> para listar dispositivos (necessário autenticação)
-> - [ ] ***POST   /devices***       --> para adicionar dispositivos (necessário autenticação)
-> - [ ] ***PUT    /devices/{id}***  --> para editar dispositivos (necessário autenticação + admin)
-> - [ ] ***DELETE /devices/{id}***  --> para apagar dispositivo (necessário autenticação + admin)
-
-> - [ ] ***GET    /devices/{id}/users***  --> para listar usuários com acesso ao dispositivo (necessário autenticação + admin)
-> - [ ] ***POST   /devices/{id}/users***  --> para adicionar novo acesso de usuário ao disp (necessário autenticação + admin)
-> - [ ] ***DELETE /devices/{id}/users{usersId}*** --> para remover o acesso de um usuário ao dispositivo (autenticação + admin)
-
-> - [ ] ***GET    /devices/{id}/events*** --> para listar todos os eventos relacionados ao dispositivo (autenticação)
+- [ ] ***GET    /devices***       --> para listar dispositivos (necessário autenticação)
+- [ ] ***POST   /devices***       --> para adicionar dispositivos (necessário autenticação)
+- [ ] ***PUT    /devices/{id}***  --> para editar dispositivos (necessário autenticação + admin)
+- [ ] ***DELETE /devices/{id}***  --> para apagar dispositivo (necessário autenticação + admin)
+- [ ] ***GET    /devices/{id}/users***  --> para listar usuários com acesso ao dispositivo (necessário autenticação + admin)
+- [ ] ***POST   /devices/{id}/users***  --> para adicionar novo acesso de usuário ao disp (necessário autenticação + admin)
+- [ ] ***DELETE /devices/{id}/users{usersId}*** --> para remover o acesso de um usuário ao dispositivo (autenticação + admin)
+- [ ] ***GET    /devices/{id}/events*** --> para listar todos os eventos relacionados ao dispositivo (autenticação)
