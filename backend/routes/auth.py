@@ -52,7 +52,8 @@ async def login_swagger(form: OA2PRF = Depends(), session: Session = Depends(get
 
     Rota para login de usuário pelo botão Authorize do Swagger.
     Essa rota não armazena uma nova seção no banco de dados.
-    Apenas permite utilizar as rotas bloqueadas na interface de testes do Swagger, mas para isso utilize o botão "Authorize" acima.
+    Apenas permite utilizar as rotas bloqueadas na interface de testes do Swagger.
+    Para isso utilize o botão "Authorize" acima.
     """
 
     # fazendo buscas no DB pela existência do nome de usuário
@@ -74,7 +75,7 @@ async def login_swagger(form: OA2PRF = Depends(), session: Session = Depends(get
 async def logout(user: User = Depends(token_validation), session: Session = Depends(get_db_session)):
     """
     Rota para fazer logout de usuário.
-    Necessário enviar o header nessa requisição:
+    Necessário enviar no header dessa requisição:
 
         headers = {
             "Authorization": "Bearer SEU_ACCESS_TOKEN_AQUI",
@@ -112,7 +113,7 @@ async def logout(user: User = Depends(token_validation), session: Session = Depe
 async def refresh(user: User = Depends(token_validation)):
     """
     Rota para fazer refresh da seção e receber um novo "access_token".
-    Necessário enviar o header nessa requisição:
+    Necessário enviar no header dessa requisição:
 
         headers = {
             "Authorization": "Bearer SEU_REFRESH_TOKEN_AQUI",
