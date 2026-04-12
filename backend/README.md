@@ -38,7 +38,7 @@ Após o servidor estar funcionando, acessar pelo navegador: <http://127.0.0.1:80
 ### users
 - [x] ***POST   /users***         --> para criar conta de novo usuário
 - [x] ***PUT    /users/me***      --> para editar conta de usuário (necessário autenticação)
-- [ ] ***DELETE /users/me***      --> para excluir conta (necessário autenticação)
+- [x] ***DELETE /users/me***      --> para excluir conta (necessário autenticação)
 
 ### auth
 - [x] ***POST   /auth/login***         --> para fazer login (cria seção/token)

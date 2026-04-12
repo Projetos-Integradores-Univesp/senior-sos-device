@@ -48,7 +48,10 @@ def token_validation(
         payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
         user_id = payload["user_id"]
         user = session.query(User).filter(User.id == user_id).first()
-        return user
+        if user:
+            return user
+        else:
+            raise HTTPException(status_code=400, detail="User not found.")
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired.")
     except jwt.InvalidTokenError:

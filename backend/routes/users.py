@@ -44,7 +44,7 @@ async def update_account(
     Em "SEU_ACCESS_TOKEN_AQUI" substituir pelo "access_token" do usuário.
     """
 
-    # fazendo buscas no DB pela existência do nome de usuário
+    # Fazendo buscas no DB pela existência do nome de usuário
     username_exists_in_db = session.query(User).filter(User.username == new_credentials.username).first()
 
     if not username_exists_in_db:
@@ -64,5 +64,24 @@ async def update_account(
 
 
 @users_router.delete("/me")
-async def delete_account():
-    pass
+async def delete_account(session: Session = Depends(get_db_session), user: User = Depends(token_validation)):
+    """
+    Rota para exclusão da conta do usuário.
+    Necessário enviar no header dessa requisição:
+
+        headers = {
+            "Authorization": "Bearer SEU_ACCESS_TOKEN_AQUI",
+            "Content-Type": "application/json"
+        }
+
+    Em "SEU_ACCESS_TOKEN_AQUI" substituir pelo "access_token" do usuário.
+    """
+
+    # Fazendo buscas no DB pelo usuário
+    user = session.query(User).filter(User.id == user.id).first()
+
+    # Apagando registro no DB
+    session.delete(user)
+    session.commit()
+
+    return {"detail": {"message": "User successfully deleted.", "deleted": True}}
