@@ -14,10 +14,10 @@ async def create_account(user_credentials: UserCredentials, session: Session = D
     """Rota para criação de novo usuário."""
 
     # Fazendo buscas no DB pela existência do nome de usuário
-    username_exists_in_db = session.query(User).filter(User.username == user_credentials.username).first()
+    user_exists = session.query(User).filter(User.username == user_credentials.username).first()
 
     # Criando novo usuário se não existir
-    if not username_exists_in_db:
+    if not user_exists:
         password_hash = generate_hash(user_credentials.password)
         new_user = User(user_credentials.username, password_hash)
         session.add(new_user)
@@ -45,9 +45,9 @@ async def update_account(
     """
 
     # Fazendo buscas no DB pela existência do nome de usuário
-    username_exists_in_db = session.query(User).filter(User.username == new_credentials.username).first()
+    user_exists = session.query(User).filter(User.username == new_credentials.username).first()
 
-    if not username_exists_in_db:
+    if not user_exists:
         # Construindo a instrução de atualização
         statement = (
             update(User)

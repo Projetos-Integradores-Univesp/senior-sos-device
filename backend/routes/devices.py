@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.utils import token_validation, get_db_session
-from backend.models import User, Device, Have
+from backend.models import User, Device, Event, Have
 
 devices_router = APIRouter(prefix="/devices", tags=["devices"])
 
@@ -13,12 +13,15 @@ async def get_devices():
 
 @devices_router.post("/")
 async def add_device(nickname: str, user: User = Depends(token_validation), session: Session = Depends(get_db_session)):
-    """Rota para adicionar novos dispositivos."""
+    """
+    Rota para adicionar novos dispositivos. Necessário enviar token de autenticação.
+    O usuário que adicionar o novo dispositivo, será o administrador desse dispositivo.
+    """
 
     # Fazendo buscas no DB pela existência do "nickname"
     nickname_exists = session.query(Device).filter(Device.nickname == nickname).first()
 
-    # Adcionando novo dispositivo
+    # Adicionando novo dispositivo
     if not nickname_exists:
         new_device = Device(user.id, nickname)
         session.add(new_device)
