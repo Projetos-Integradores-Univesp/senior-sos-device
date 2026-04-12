@@ -15,7 +15,7 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"])
 async def login(user_credentials: UserCredentials, session: Session = Depends(get_db_session)):
     """Rota para login de usuário."""
 
-    # fazendo buscas no DB pela existência do nome de usuário
+    # Fazendo buscas no DB pela existência do nome de usuário
     user = session.query(User).filter(User.username == user_credentials.username).first()
 
     if user:
@@ -56,7 +56,7 @@ async def login_swagger(form: OA2PRF = Depends(), session: Session = Depends(get
     Para isso utilize o botão "Authorize" acima.
     """
 
-    # fazendo buscas no DB pela existência do nome de usuário
+    # Fazendo buscas no DB pela existência do nome de usuário
     user = session.query(User).filter(User.username == form.username).first()
 
     if user:

@@ -13,7 +13,7 @@ users_router = APIRouter(prefix="/users", tags=["users"])
 async def create_account(user_credentials: UserCredentials, session: Session = Depends(get_db_session)):
     """Rota para criação de novo usuário."""
 
-    # fazendo buscas no DB pela existência do nome de usuário
+    # Fazendo buscas no DB pela existência do nome de usuário
     username_exists_in_db = session.query(User).filter(User.username == user_credentials.username).first()
 
     # Criando novo usuário se não existir
