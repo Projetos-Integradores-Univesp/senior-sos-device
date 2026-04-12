@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from backend.utils import token_validation, get_db_session
+from backend.models import User, Device, Have
 
 devices_router = APIRouter(prefix="/devices", tags=["devices"])
 
@@ -10,8 +12,27 @@ async def get_devices():
 
 
 @devices_router.post("/")
-async def add_device():
-    pass
+async def add_device(nickname: str, user: User = Depends(token_validation), session: Session = Depends(get_db_session)):
+    """Rota para adicionar novos dispositivos."""
+
+    # Fazendo buscas no DB pela existência do "nickname"
+    nickname_exists = session.query(Device).filter(Device.nickname == nickname).first()
+
+    # Adcionando novo dispositivo
+    if not nickname_exists:
+        new_device = Device(user.id, nickname)
+        session.add(new_device)
+        session.commit()
+
+        # Preenchendo a tabela "Have"
+        device = session.query(Device).filter(Device.nickname == nickname).first()
+        new_relationship = Have(user.id, device.id)
+        session.add(new_relationship)
+        session.commit()
+
+        return {"detail": {"message": "New device added successfully.", "add_device": True}}
+    else:
+        raise HTTPException(status_code=400, detail={"message": "Device already registered.", "add_device": False})
 
 
 @devices_router.put("/{id}")
