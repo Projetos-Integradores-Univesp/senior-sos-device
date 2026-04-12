@@ -47,7 +47,7 @@ Após o servidor estar funcionando, acessar pelo navegador: <http://127.0.0.1:80
 - [x] ***GET    /auth/refresh***       --> para fazer refresh da seção (com o refresh_token)
 
 ### devices
-- [ ] ***GET    /devices***       --> para listar dispositivos (necessário autenticação)
+- [x] ***GET    /devices***       --> para listar dispositivos (necessário autenticação)
 - [x] ***POST   /devices***       --> para adicionar dispositivos (necessário autenticação)
 - [ ] ***PUT    /devices/{id}***  --> para editar dispositivos (necessário autenticação + admin)
 - [ ] ***DELETE /devices/{id}***  --> para apagar dispositivo (necessário autenticação + admin)
