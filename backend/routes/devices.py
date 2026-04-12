@@ -17,11 +17,10 @@ async def get_devices(user: User = Depends(token_validation), session: Session =
     devices_info = {}
     for index, device in enumerate(relationships):
         this_device = session.query(Device).filter(Device.id == device.device_id).first()
-        this_user = session.query(User).filter(User.id == device.user_id).first()
 
         device_info = {
             "nickname": this_device.nickname,
-            "admin": (True if this_device.user_id_admin == this_user.id else False),
+            "admin": (True if this_device.user_id_admin == user.id else False),
         }
 
         devices_info[f"device_{index + 1}"] = device_info
