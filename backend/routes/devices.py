@@ -50,7 +50,7 @@ async def add_device(nickname: str, user: User = Depends(token_validation), sess
         session.add(new_relationship)
         session.commit()
 
-        return {"detail": {"message": "New device added successfully.", "add_device": True}}
+        return {"detail": {"message": "New device added successfully.", "device_id": device.id, "add_device": True}}
     else:
         raise HTTPException(status_code=400, detail={"message": "Device already registered.", "add_device": False})
 
