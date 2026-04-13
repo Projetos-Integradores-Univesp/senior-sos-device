@@ -15,8 +15,8 @@ async def get_devices(user: User = Depends(token_validation), session: Session =
     relationships = session.query(Have).filter(Have.user_id == user.id).all()
 
     devices_info = {}
-    for index, device in enumerate(relationships):
-        this_device = session.query(Device).filter(Device.id == device.device_id).first()
+    for index, relationship in enumerate(relationships):
+        this_device = session.query(Device).filter(Device.id == relationship.device_id).first()
 
         device_info = {
             "device_id": this_device.id,
@@ -98,8 +98,29 @@ async def delete_device(id: int, user: User = Depends(token_validation), session
 
 
 @devices_router.get("/{id}/users")
-async def get_users(id: int):
-    pass
+async def get_users(id: int, user: User = Depends(token_validation), session: Session = Depends(get_db_session)):
+    """
+    Rota para listar os usuários com acesso ao dispositivo. Necessário ser o admin do dispositivo.
+    Necessário enviar token de autenticação.
+    """
+    device = session.query(Device).filter(Device.id == id).first()
+
+    if device:
+        if device.user_id_admin == user.id:
+            relationships = session.query(Have).filter(Have.device_id == id).all()
+
+            users_info = {}
+            for index, relationship in enumerate(relationships):
+                this_user = session.query(User).filter(User.id == relationship.user_id).first()
+                if this_user.id != user.id:
+                    users_info[f"user_{index + 1}"] = this_user.username
+
+            return users_info
+
+        else:
+            raise HTTPException(status_code=403, detail={"message": "You must be device admin."})
+    else:
+        raise HTTPException(status_code=400, detail="Device not found.")
 
 
 @devices_router.post("/{id}/users")
