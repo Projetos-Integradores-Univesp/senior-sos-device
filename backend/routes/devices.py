@@ -19,6 +19,7 @@ async def get_devices(user: User = Depends(token_validation), session: Session =
         this_device = session.query(Device).filter(Device.id == device.device_id).first()
 
         device_info = {
+            "device_id": this_device.id,
             "nickname": this_device.nickname,
             "admin": (True if this_device.user_id_admin == user.id else False),
         }
@@ -78,8 +79,22 @@ async def edit_device(
 
 
 @devices_router.delete("/{id}")
-async def delete_device(id: int):
-    pass
+async def delete_device(id: int, user: User = Depends(token_validation), session: Session = Depends(get_db_session)):
+    """
+    Rota para excluir dispositivo. Necessário ser o admin do dispositivo.
+    Necessário enviar token de autenticação.
+    """
+    device = session.query(Device).filter(Device.id == id).first()
+
+    if device:
+        if device.user_id_admin == user.id:
+            session.delete(device)
+            session.commit()
+            return {"detail": {"message": "Device successfully deleted.", "deleted": True}}
+        else:
+            raise HTTPException(status_code=403, detail={"message": "You must be device admin."})
+    else:
+        raise HTTPException(status_code=400, detail="Device not found.")
 
 
 @devices_router.get("/{id}/users")
