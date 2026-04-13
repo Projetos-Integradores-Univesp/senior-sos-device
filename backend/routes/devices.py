@@ -56,8 +56,25 @@ async def add_device(nickname: str, user: User = Depends(token_validation), sess
 
 
 @devices_router.put("/{id}")
-async def edit_device(id: int):
-    pass
+async def edit_device(
+    id: int, nickname: str, user: User = Depends(token_validation), session: Session = Depends(get_db_session)
+):
+    """
+    Rota para editar o dispositivo. Necessário ser o admin do dispositivo.
+    Necessário enviar token de autenticação.
+    """
+    device = session.query(Device).filter(Device.id == id).first()
+    nickname_exits = session.query(Device).filter(Device.nickname == nickname).first()
+
+    if device.user_id_admin == user.id:
+        if not nickname_exits:
+            device.nickname = nickname
+            session.commit()
+            return {"detail": {"message": "Device updated successfully.", "updated": True}}
+        else:
+            raise HTTPException(status_code=400, detail={"message": "Nickname already registered.", "updated": False})
+    else:
+        raise HTTPException(status_code=403, detail={"message": "You must be device admin."})
 
 
 @devices_router.delete("/{id}")
