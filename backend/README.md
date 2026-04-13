@@ -53,5 +53,5 @@ Após o servidor estar funcionando, acessar pelo navegador: <http://127.0.0.1:80
 - [x] ***DELETE /devices/{id}***  --> para apagar dispositivo (necessário autenticação + admin)
 - [x] ***GET    /devices/{id}/users***  --> para listar usuários com acesso ao dispositivo (necessário autenticação + admin)
 - [x] ***POST   /devices/{id}/users/{username}*** --> para adicionar novo acesso de usuário ao disp (necessário autenticação + admin)
-- [ ] ***DELETE /devices/{id}/users/{username}***  --> para remover o acesso de um usuário ao dispositivo (autenticação + admin)
+- [x] ***DELETE /devices/{id}/users/{username}***  --> para remover o acesso de um usuário ao dispositivo (autenticação + admin)
 - [ ] ***GET    /devices/{id}/events*** --> para listar todos os eventos relacionados ao dispositivo (autenticação)

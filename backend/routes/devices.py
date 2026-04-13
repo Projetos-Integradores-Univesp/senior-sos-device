@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from backend.utils import token_validation, get_db_session
 from backend.models import User, Device, Event, Have
@@ -124,7 +125,7 @@ async def get_users(id: int, user: User = Depends(token_validation), session: Se
 
 
 @devices_router.post("/{id}/users/{username}")
-async def add_user(
+async def add_access(
     id: int, username: str, user: User = Depends(token_validation), session: Session = Depends(get_db_session)
 ):
     """
@@ -140,7 +141,7 @@ async def add_user(
             session.add(new_relationship)
             session.commit()
 
-            return {"detail": {"message": "New user added to device successfully.", "add_user": True}}
+            return {"detail": {"message": "New user access added to device successfully.", "add_access": True}}
         else:
             raise HTTPException(status_code=403, detail={"message": "You must be device admin."})
     else:
@@ -148,8 +149,34 @@ async def add_user(
 
 
 @devices_router.delete("/{id}/users/{username}")
-async def delete_user(id: int, username: int):
-    pass
+async def remove_access(
+    id: int, username: int, user: User = Depends(token_validation), session: Session = Depends(get_db_session)
+):
+    """
+    Rota para remover o acesso de um usuário a um dispositivo. Necessário enviar token de autenticação.
+    Somente o administrador do dispositivo e o usuário com acesso ao dispositivo podem remover o acesso.
+    """
+    device = session.query(Device).filter(Device.id == id).first()
+    user_requesting = session.query(User).filter(User.username == username).first()
+
+    if device and user_requesting:
+        relationship = (
+            session.query(Have).filter(and_(Have.device_id == device.id, Have.user_id == user_requesting.id)).first()
+        )
+
+        if (device.user_id_admin == user.id and user.id != user_requesting.id) or (
+            relationship.user_id == user_requesting.id
+        ):
+            session.delete(relationship)
+            session.commit()
+
+            return {"detail": {"message": "Access removed successfully.", "remove_access": True}}
+        else:
+            raise HTTPException(
+                status_code=403, detail={"message": "You must be device admin or user with access to device."}
+            )
+    else:
+        raise HTTPException(status_code=400, detail="Device or user not found.")
 
 
 @devices_router.get("/{id}/events")
