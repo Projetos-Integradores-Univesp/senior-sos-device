@@ -113,7 +113,7 @@ async def get_users(id: int, user: User = Depends(token_validation), session: Se
             for index, relationship in enumerate(relationships):
                 this_user = session.query(User).filter(User.id == relationship.user_id).first()
                 if this_user.id != user.id:
-                    users_info[f"user_{index + 1}"] = this_user.username
+                    users_info[f"user_{index}"] = this_user.username
 
             return users_info
 
@@ -123,13 +123,32 @@ async def get_users(id: int, user: User = Depends(token_validation), session: Se
         raise HTTPException(status_code=400, detail="Device not found.")
 
 
-@devices_router.post("/{id}/users")
-async def add_user(id: int):
-    pass
+@devices_router.post("/{id}/users/{username}")
+async def add_user(
+    id: int, username: str, user: User = Depends(token_validation), session: Session = Depends(get_db_session)
+):
+    """
+    Rota para adicionar novo acesso de usuário ao dispositivo. Necessário ser o admin do dispositivo.
+    Necessário enviar token de autenticação.
+    """
+    device = session.query(Device).filter(Device.id == id).first()
+    new_user = session.query(User).filter(User.username == username).first()
+
+    if device and new_user:
+        if device.user_id_admin == user.id:
+            new_relationship = Have(new_user.id, device.id)
+            session.add(new_relationship)
+            session.commit()
+
+            return {"detail": {"message": "New user added to device successfully.", "add_user": True}}
+        else:
+            raise HTTPException(status_code=403, detail={"message": "You must be device admin."})
+    else:
+        raise HTTPException(status_code=400, detail="Device or new user not found.")
 
 
-@devices_router.delete("/{id}/users/{user_id}")
-async def delete_user(id: int, user_id: int):
+@devices_router.delete("/{id}/users/{username}")
+async def delete_user(id: int, username: int):
     pass
 
 
