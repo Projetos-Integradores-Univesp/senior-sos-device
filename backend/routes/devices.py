@@ -150,30 +150,36 @@ async def add_access(
 
 @devices_router.delete("/{id}/users/{username}")
 async def remove_access(
-    id: int, username: int, user: User = Depends(token_validation), session: Session = Depends(get_db_session)
+    id: int, username: str, user: User = Depends(token_validation), session: Session = Depends(get_db_session)
 ):
     """
     Rota para remover o acesso de um usuário a um dispositivo. Necessário enviar token de autenticação.
     Somente o administrador do dispositivo e o usuário com acesso ao dispositivo podem remover o acesso.
     """
     device = session.query(Device).filter(Device.id == id).first()
-    user_requesting = session.query(User).filter(User.username == username).first()
+    user_to_remove = session.query(User).filter(User.username == username).first()
+    relationship = (
+        session.query(Have).filter(and_(Have.device_id == device.id, Have.user_id == user_to_remove.id)).first()
+    )
 
-    if device and user_requesting:
-        relationship = (
-            session.query(Have).filter(and_(Have.device_id == device.id, Have.user_id == user_requesting.id)).first()
-        )
+    if relationship:
+        # O administrador do dispositivo solicita a remoção de acesso de outro usuário
+        # ... OU ...
+        # O usuário não é o administrador, mas solicita para si mesmo a remoção de acesso
 
-        if (device.user_id_admin == user.id and user.id != user_requesting.id) or (
-            relationship.user_id == user_requesting.id
-        ):
+        is_admin: bool = device.user_id_admin == user.id
+        is_self_removal: bool = user.id == user_to_remove.id
+
+        if is_admin != is_self_removal:
             session.delete(relationship)
             session.commit()
-
             return {"detail": {"message": "Access removed successfully.", "remove_access": True}}
         else:
             raise HTTPException(
-                status_code=403, detail={"message": "You must be device admin or user with access to device."}
+                status_code=403,
+                detail={
+                    "message": "Admin can't remove yourself. If you are not device admin, you must have access to device."
+                },
             )
     else:
         raise HTTPException(status_code=400, detail="Device or user not found.")
