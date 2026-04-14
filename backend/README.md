@@ -55,3 +55,4 @@ Após o servidor estar funcionando, acessar pelo navegador: <http://127.0.0.1:80
 - [x] ***POST   /devices/{id}/users/{username}*** --> para adicionar novo acesso de usuário ao disp (necessário autenticação + admin)
 - [x] ***DELETE /devices/{id}/users/{username}***  --> para remover o acesso de um usuário ao dispositivo (autenticação + admin)
 - [ ] ***GET    /devices/{id}/events*** --> para listar todos os eventos relacionados ao dispositivo (autenticação)
+- [ ] ***POST   /devices/{id}/events*** --> para adicionar evento ao dispositivo (autenticação)

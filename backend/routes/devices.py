@@ -188,3 +188,8 @@ async def remove_access(
 @devices_router.get("/{id}/events")
 async def get_events(id: int):
     pass
+
+
+@devices_router.post("/{id}/events")
+async def add_events(id: int):
+    pass
