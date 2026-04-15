@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy import Integer, String, DateTime, Boolean
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy_utils.types import ChoiceType
 from datetime import datetime, timezone
 from backend.settings import MODELS_DB_LINK
@@ -25,6 +25,11 @@ class User(Base):
     created_at = Column("created_at", DateTime)
     status = Column("status", Boolean, default=True)
 
+    # RELATIONSHIPS
+    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    devices_admin = relationship("Device", back_populates="admin", cascade="all, delete-orphan")
+    devices = relationship("Device", secondary="have", back_populates="users")
+
     def __init__(self, username, password_hash, status=True):
         self.username = username
         self.password_hash = password_hash
@@ -42,6 +47,9 @@ class Session(Base):
     login_time = Column("login_time", DateTime)
     logout_time = Column("logout_time", DateTime)
 
+    # RELATIONSHIP
+    user = relationship("User", back_populates="sessions")
+
     def __init__(self, user_id: User):
         self.user_id = user_id
         self.login_time = datetime.now(timezone.utc)
@@ -56,6 +64,11 @@ class Device(Base):
     user_id_admin = Column("user_id_admin", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     nickname = Column("nickname", String(128), unique=True, nullable=False)
     created_at = Column("created_at", DateTime)
+
+    # RELATIONSHIPS
+    admin = relationship("User", back_populates="devices_admin")
+    events = relationship("Event", back_populates="device", cascade="all, delete-orphan")
+    users = relationship("User", secondary="have", back_populates="devices")
 
     def __init__(self, user_id_admin: User, nickname):
         self.user_id_admin = user_id_admin
@@ -75,6 +88,9 @@ class Event(Base):
     type = Column("type", ChoiceType(EVENTS_TYPES))
     time = Column("created_at", DateTime)
 
+    # RELATIONSHIP
+    device = relationship("Device", back_populates="events")
+
     def __init__(self, device_id: Device, type="BUTTON PRESSED"):
         self.device_id = device_id
         self.type = type
@@ -86,8 +102,8 @@ class Have(Base):
     # Nome da tabela no banco de dados
     __tablename__ = "have"
 
-    user_id = Column("user_id", ForeignKey("users.id"), primary_key=True)
-    device_id = Column("device_id", ForeignKey("devices.id"), primary_key=True)
+    user_id = Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    device_id = Column("device_id", ForeignKey("devices.id", ondelete="CASCADE"), primary_key=True)
 
     def __init__(self, user_id: User, device_id: Device):
         self.user_id = user_id

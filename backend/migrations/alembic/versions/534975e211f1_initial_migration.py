@@ -1,8 +1,8 @@
 """initial_migration
 
-Revision ID: 4358dc84870e
+Revision ID: 534975e211f1
 Revises:
-Create Date: 2026-04-07 16:48:48.860166
+Create Date: 2026-04-14 22:26:23.806872
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "4358dc84870e"
+revision: str = "534975e211f1"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -64,14 +64,8 @@ def upgrade() -> None:
         "have",
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("device_id", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["device_id"],
-            ["devices.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["users.id"],
-        ),
+        sa.ForeignKeyConstraint(["device_id"], ["devices.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("user_id", "device_id"),
     )
     # ### end Alembic commands ###
