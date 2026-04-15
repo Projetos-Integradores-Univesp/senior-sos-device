@@ -1,8 +1,8 @@
 """initial_migration
 
-Revision ID: 534975e211f1
+Revision ID: 900406edbeed
 Revises:
-Create Date: 2026-04-14 22:26:23.806872
+Create Date: 2026-04-15 18:20:28.780447
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "534975e211f1"
+revision: str = "900406edbeed"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,8 +27,8 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("username", sa.String(length=128), nullable=False),
         sa.Column("password_hash", sa.String(length=256), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
-        sa.Column("status", sa.Boolean(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("status", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("username"),
     )
@@ -37,7 +37,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("user_id_admin", sa.Integer(), nullable=False),
         sa.Column("nickname", sa.String(length=128), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id_admin"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("nickname"),
@@ -46,8 +46,8 @@ def upgrade() -> None:
         "sessions",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("login_time", sa.DateTime(), nullable=True),
-        sa.Column("logout_time", sa.DateTime(), nullable=True),
+        sa.Column("login_time", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("logout_time", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -55,8 +55,8 @@ def upgrade() -> None:
         "events",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("device_id", sa.Integer(), nullable=False),
-        sa.Column("type", sa.String(length=32), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
+        sa.Column("type", sa.String(length=32), nullable=False),
+        sa.Column("time", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["device_id"], ["devices.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )

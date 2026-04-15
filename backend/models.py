@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine
-from sqlalchemy import Column, ForeignKey
-from sqlalchemy import Integer, String, DateTime, Boolean
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import ForeignKey, String, DateTime
+from sqlalchemy.orm import declarative_base, relationship, Mapped, mapped_column
 from sqlalchemy_utils.types import ChoiceType
 from datetime import datetime, timezone
 from backend.settings import MODELS_DB_LINK
@@ -19,16 +18,16 @@ class User(Base):
     # Nome da tabela no banco de dados
     __tablename__ = "users"
 
-    id = Column("id", Integer, primary_key=True, autoincrement=True)
-    username = Column("username", String(128), unique=True, nullable=False)
-    password_hash = Column("password_hash", String(256), nullable=False)
-    created_at = Column("created_at", DateTime)
-    status = Column("status", Boolean, default=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[bool] = mapped_column(default=True)
 
-    # RELATIONSHIPS
-    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
-    devices_admin = relationship("Device", back_populates="admin", cascade="all, delete-orphan")
-    devices = relationship("Device", secondary="have", back_populates="users")
+    # Relationships
+    sessions: Mapped[list["Session"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    devices_admin: Mapped[list["Device"]] = relationship(back_populates="admin", cascade="all, delete-orphan")
+    devices: Mapped[list["Device"]] = relationship(secondary="have", back_populates="users")
 
     def __init__(self, username, password_hash, status=True):
         self.username = username
@@ -42,15 +41,15 @@ class Session(Base):
     # Nome da tabela no banco de dados
     __tablename__ = "sessions"
 
-    id = Column("id", Integer, primary_key=True, autoincrement=True)
-    user_id = Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    login_time = Column("login_time", DateTime)
-    logout_time = Column("logout_time", DateTime)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    login_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    logout_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
-    # RELATIONSHIP
-    user = relationship("User", back_populates="sessions")
+    # Relationship
+    user: Mapped[list["User"]] = relationship(back_populates="sessions")
 
-    def __init__(self, user_id: User):
+    def __init__(self, user_id: int):
         self.user_id = user_id
         self.login_time = datetime.now(timezone.utc)
 
@@ -60,17 +59,17 @@ class Device(Base):
     # Nome da tabela no banco de dados
     __tablename__ = "devices"
 
-    id = Column("id", Integer, primary_key=True, autoincrement=True)
-    user_id_admin = Column("user_id_admin", ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    nickname = Column("nickname", String(128), unique=True, nullable=False)
-    created_at = Column("created_at", DateTime)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id_admin: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    nickname: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
-    # RELATIONSHIPS
-    admin = relationship("User", back_populates="devices_admin")
-    events = relationship("Event", back_populates="device", cascade="all, delete-orphan")
-    users = relationship("User", secondary="have", back_populates="devices")
+    # Relationships
+    admin: Mapped[list["User"]] = relationship(back_populates="devices_admin")
+    events: Mapped[list["Event"]] = relationship(back_populates="device", cascade="all, delete-orphan")
+    users: Mapped[list["User"]] = relationship(secondary="have", back_populates="devices")
 
-    def __init__(self, user_id_admin: User, nickname):
+    def __init__(self, user_id_admin: int, nickname):
         self.user_id_admin = user_id_admin
         self.nickname = nickname
         self.created_at = datetime.now(timezone.utc)
@@ -83,15 +82,15 @@ class Event(Base):
 
     EVENTS_TYPES = (("BUTTON PRESSED", "BUTTON PRESSED"), ("FALL", "FALL"))
 
-    id = Column("id", Integer, primary_key=True, autoincrement=True)
-    device_id = Column("device_id", ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
-    type = Column("type", ChoiceType(EVENTS_TYPES))
-    time = Column("created_at", DateTime)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    device_id: Mapped[int] = mapped_column(ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
+    type: Mapped[str] = mapped_column(ChoiceType(EVENTS_TYPES))
+    time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
-    # RELATIONSHIP
-    device = relationship("Device", back_populates="events")
+    # Relationship
+    device: Mapped[list["Device"]] = relationship(back_populates="events")
 
-    def __init__(self, device_id: Device, type="BUTTON PRESSED"):
+    def __init__(self, device_id: int, type="BUTTON PRESSED"):
         self.device_id = device_id
         self.type = type
         self.time = datetime.now(timezone.utc)
@@ -102,9 +101,9 @@ class Have(Base):
     # Nome da tabela no banco de dados
     __tablename__ = "have"
 
-    user_id = Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    device_id = Column("device_id", ForeignKey("devices.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    device_id: Mapped[int] = mapped_column(ForeignKey("devices.id", ondelete="CASCADE"), primary_key=True)
 
-    def __init__(self, user_id: User, device_id: Device):
+    def __init__(self, user_id: int, device_id: int):
         self.user_id = user_id
         self.device_id = device_id
