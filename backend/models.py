@@ -44,7 +44,7 @@ class Session(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     login_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    logout_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    logout_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationship
     user: Mapped[list["User"]] = relationship(back_populates="sessions")
