@@ -13,4 +13,10 @@ def start():
 
 
 if __name__ == "__main__":
-    start()
+    # start()
+    new_connection = MqttClientConnection(
+        MQTT_BROKER_CONFIG["HOST"],
+        MQTT_BROKER_CONFIG["PORT"],
+        MQTT_BROKER_CONFIG["CLIENT_NAME"],
+        MQTT_BROKER_CONFIG["KEEPALIVE"],
+    )

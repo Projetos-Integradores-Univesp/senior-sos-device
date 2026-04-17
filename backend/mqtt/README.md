@@ -33,3 +33,8 @@ Com outro terminal aberto, publique uma mensagem no mesmo tópico de teste:
 ```bash
 mosquitto_pub -h localhost -t teste -m "Hello world!"
 ```
+### Como rodar main.py do módulo mqtt
+No terminal, na raiz do projeto, digitar:
+```bash
+python -m backend.mqtt.main
+```

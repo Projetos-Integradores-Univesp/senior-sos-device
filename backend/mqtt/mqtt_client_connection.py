@@ -8,7 +8,11 @@ class MqttClientConnection:
         self.__client_name = client_name
         self.__keepalive = keepalive
 
+        self.__mqtt_client = self.start_connection()
+        self.__mqtt_client.loop_start()
+
     def start_connection(self):
-        mqtt_client = mqtt.Client(self.__client_name)
+        mqtt_client = mqtt.Client()
         mqtt_client.connect(host=self.__broker_ip, port=self.__port, keepalive=self.__keepalive)
-        mqtt_client.loop_start()
+        # mqtt_client.loop_start()
+        return mqtt_client

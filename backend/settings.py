@@ -22,5 +22,5 @@ MQTT_BROKER_CONFIG = {
     "HOST": "localhost",
     "PORT": 1883,
     "CLIENT_NAME": "backend_senior_sos_device",
-    "KEPPALIVE": 60,
+    "KEEPALIVE": 60,
 }
