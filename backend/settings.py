@@ -16,3 +16,11 @@ ACCESS_TOKEN_EXPIRATION_MINUTES = float(os.getenv("ACCESS_TOKEN_EXPIRATION_MINUT
 # Configuração dos links do DB para models.py e alembic.ini
 MODELS_DB_LINK = "sqlite:///backend/database.db"
 ALEMBIC_DB_LINK = "sqlite:///../database.db"  # --> substituir manualmente por enquanto...
+
+# Configurações do broker MQTT
+MQTT_BROKER_CONFIG = {
+    "HOST": "localhost",
+    "PORT": 1883,
+    "CLIENT_NAME": "backend_senior_sos_device",
+    "KEPPALIVE": 60,
+}
