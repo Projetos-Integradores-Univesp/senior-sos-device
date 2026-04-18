@@ -18,9 +18,12 @@ MODELS_DB_LINK = "sqlite:///backend/database.db"
 ALEMBIC_DB_LINK = "sqlite:///../database.db"  # --> substituir manualmente por enquanto...
 
 # Configurações do broker MQTT
-MQTT_BROKER_CONFIG = {
-    "HOST": "localhost",
+MQTT_CONFIG = {
+    "BROKER_URL": "localhost",
     "PORT": 1883,
-    "CLIENT_NAME": "backend_senior_sos_device",
+    "CLIENT_ID": "backend-senior-sos-device-subscriber",
     "KEEPALIVE": 60,
+    "USERNAME": "",
+    "PASSWORD": "",
+    "TOPICS": {"BUTTON_PRESSED": "devices/+/button-pressed", "FALL": "devices/+/fall"},
 }
