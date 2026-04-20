@@ -1,3 +1,4 @@
+import ssl
 import paho.mqtt.client as mqtt
 from backend.settings import MQTT_CONFIG
 
@@ -5,9 +6,12 @@ from backend.settings import MQTT_CONFIG
 class Subscriber:
     def __init__(self):
         self.client = mqtt.Client(client_id=MQTT_CONFIG["CLIENT_ID"], protocol=mqtt.MQTTv5)
-        # self.client.username_pw_set("freemqtt", "public")
+        self.client.username_pw_set(MQTT_CONFIG["USERNAME"], MQTT_CONFIG["PASSWORD"])
+        self.client.tls_set(tls_version=ssl.PROTOCOL_TLS_CLIENT)
         self.client.on_connect = self.on_connect
+        self.client.on_connect_fail = self.on_connect_fail
         self.client.on_message = self.on_message
+        self.client.on_subscribe = self.on_subscribe
 
         try:
             self.client.connect(
@@ -16,34 +20,34 @@ class Subscriber:
                 MQTT_CONFIG["KEEPALIVE"],
             )
 
-            # Acrescentar log de Backend MQTT em funcionamento...
-            print("Backend MQTT em funcionamento.")
+            # Assinando no tópico de "botão pressionado" e "queda"
+            self.client.subscribe(MQTT_CONFIG["TOPICS"]["BUTTON_PRESSED"], qos=MQTT_CONFIG["QOS"])
+            self.client.subscribe(MQTT_CONFIG["TOPICS"]["FALL"], qos=MQTT_CONFIG["QOS"])
+
+            # Acrescentar log aqui...
+            print("Backend MQTT conectado ao broker. Iniciando loop...")
 
             rc = 0
             while rc == 0:
                 rc = self.client.loop()
+
+            # Acrescentar log aqui..."
             print(f"rc: {str(rc)}")
 
         except Exception as e:
-            # Acrescentar log de falha aqui..
+            # Acrescentar log aqui..
             print(f"Falha na conexão. Erro: {e}")
         finally:
             self.client.loop_stop()
 
     # Callback quando se conectar ao broker
     def on_connect(self, client, userdata, flags, reason_code, properties=None):
-        if reason_code == 0:
-            # Assinando no tópico de "botão pressionado"
-            self.client.subscribe(MQTT_CONFIG["TOPICS"]["BUTTON_PRESSED"], qos=2)
+        # Acrescentar log aqui...
+        print("Status da conexão: " + str(reason_code))
 
-            # Assinando no tópico de "queda"
-            self.client.subscribe(MQTT_CONFIG["TOPICS"]["FALL"], qos=2)
-
-            # Acrescentar log de conexão aqui...
-            print("Inscrições no broker MQTT bem sucedidas")
-        else:
-            # Acrescentar log de falha aqui..
-            print(f"Falha na conexão. Código: {reason_code}")
+    def on_connect_fail(self, mqttc, obj):
+        # Acrescentar log aqui...
+        print("Falha na conexão")
 
     # Callback quando receber mensagem
     def on_message(self, client, userdata, msg):
@@ -53,6 +57,13 @@ class Subscriber:
         print(f"Device ID: {device_id}, Mensagem: {payload}")
 
         # Acrescentar informações ao banco de dados...
+        # ...
+        # ...
+        # ...
+
+    def on_subscribe(self, mqttc, obj, mid, reason_code_list, properties):
+        # Acrescentar log aqui...
+        print("Inscrito no tópico: " + str(mid) + " " + str(reason_code_list))
 
 
 if __name__ == "__main__":

@@ -19,11 +19,12 @@ ALEMBIC_DB_LINK = "sqlite:///../database.db"  # --> substituir manualmente por e
 
 # Configurações do broker MQTT
 MQTT_CONFIG = {
-    "BROKER_URL": "localhost",  # "broker.freemqtt.com",
-    "PORT": 1883,
+    "BROKER_URL": os.getenv("BROKER_URL"),  # "localhost"
+    "PORT": 8883,  # (TCP) 1883, (SSL/TLS) 8883
     "CLIENT_ID": "backend-senior-sos-device-subscriber",
     "KEEPALIVE": 60,
-    "USERNAME": "",
-    "PASSWORD": "",
+    "USERNAME": os.getenv("BROKER_USERNAME"),
+    "PASSWORD": os.getenv("BROKER_PASSWORD"),
     "TOPICS": {"BUTTON_PRESSED": "devices/+/button-pressed", "FALL": "devices/+/fall"},
+    "QOS": 2,
 }
