@@ -5,6 +5,7 @@ from backend.settings import MQTT_CONFIG
 class Subscriber:
     def __init__(self):
         self.client = mqtt.Client(client_id=MQTT_CONFIG["CLIENT_ID"], protocol=mqtt.MQTTv5)
+        # self.client.username_pw_set("freemqtt", "public")
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
 
@@ -15,13 +16,13 @@ class Subscriber:
                 MQTT_CONFIG["KEEPALIVE"],
             )
 
-            self.client.loop_start()
-
             # Acrescentar log de Backend MQTT em funcionamento...
             print("Backend MQTT em funcionamento.")
 
-            while True:
-                pass
+            rc = 0
+            while rc == 0:
+                rc = self.client.loop()
+            print(f"rc: {str(rc)}")
 
         except Exception as e:
             # Acrescentar log de falha aqui..
