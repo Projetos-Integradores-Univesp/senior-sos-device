@@ -1,6 +1,9 @@
 import ssl
 import paho.mqtt.client as mqtt
+from sqlalchemy.orm import Session
 from backend.settings import MQTT_CONFIG
+from backend.utils import get_db_session
+from backend.models import Device, Event
 
 
 class Subscriber:
@@ -56,10 +59,22 @@ class Subscriber:
         device_id = (topic.split("/"))[1]
         print(f"Device ID: {device_id}, Mensagem: {payload}")
 
-        # Acrescentar informações ao banco de dados...
-        # ...
-        # ...
-        # ...
+        # Acrescentar informações ao banco de dados.
+        session: Session = next(get_db_session())
+        device: Device = session.query(Device).filter(Device.id == int(device_id)).first()
+
+        if device:
+            try:
+                event = Event(device.id, payload)
+                session.add(event)
+                session.commit()
+            finally:
+                session.close()
+                # Acrescentar log aqui...
+                print(f"Evento {payload} adicionado ao dispositivo com id = {device_id}.")
+        else:
+            # Acrescentar log aqui...
+            print(f"Dispositivo com id = {device_id} não encontrado.")
 
     def on_subscribe(self, mqttc, obj, mid, reason_code_list, properties):
         # Acrescentar log aqui...

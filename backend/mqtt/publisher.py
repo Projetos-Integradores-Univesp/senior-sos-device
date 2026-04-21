@@ -3,9 +3,9 @@ import paho.mqtt.publish as publish
 from backend.settings import MQTT_CONFIG
 
 
-def pub_fall():
+def pub_fall(id: int):
     publish.single(
-        topic="devices/99/fall",
+        topic=f"devices/{id}/fall",
         payload="FALL",
         hostname=MQTT_CONFIG["BROKER_URL"],
         qos=MQTT_CONFIG["QOS"],
@@ -15,9 +15,9 @@ def pub_fall():
     )
 
 
-def pub_button_pressed():
+def pub_button_pressed(id: int):
     publish.single(
-        topic="devices/101/button-pressed",
+        topic=f"devices/{id}/button-pressed",
         payload="BUTTON_PRESSED",
         hostname=MQTT_CONFIG["BROKER_URL"],
         qos=MQTT_CONFIG["QOS"],
@@ -28,5 +28,5 @@ def pub_button_pressed():
 
 
 if __name__ == "__main__":
-    pub_fall()
-    pub_button_pressed()
+    pub_fall(6)
+    pub_button_pressed(6)
