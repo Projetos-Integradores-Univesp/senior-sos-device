@@ -80,7 +80,7 @@ class Event(Base):
     # Nome da tabela no banco de dados
     __tablename__ = "events"
 
-    EVENTS_TYPES = (("BUTTON PRESSED", "BUTTON PRESSED"), ("FALL", "FALL"))
+    EVENTS_TYPES = (("BUTTON_PRESSED", "BUTTON_PRESSED"), ("FALL", "FALL"))
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     device_id: Mapped[int] = mapped_column(ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
