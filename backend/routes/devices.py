@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from backend.utils import token_validation, get_db_session
-from backend.models import User, Device, Event, Have
+from backend.models import User, Device, Have
+from backend.schemas import DeviceEvent
+from typing import List
+
 
 devices_router = APIRouter(prefix="/devices", tags=["devices"])
 
@@ -185,11 +188,18 @@ async def remove_access(
         raise HTTPException(status_code=400, detail="Device or user not found.")
 
 
-@devices_router.get("/{id}/events")
-async def get_events(id: int):
-    pass
+@devices_router.get("/{id}/events", response_model=List[DeviceEvent])
+async def get_events(id: int, user: User = Depends(token_validation), session: Session = Depends(get_db_session)):
+    """Rota que recupera eventos do dispositivo. Necessário enviar token de autenticação."""
 
+    device = session.query(Device).filter(Device.id == id).first()
+    user = session.query(User).filter(User.id == user.id).first()
 
-@devices_router.post("/{id}/events")
-async def add_events(id: int):
-    pass
+    if device and user:
+        relationship = session.query(Have).filter(and_(Have.device_id == device.id, Have.user_id == user.id)).first()
+        if relationship:
+            return device.events
+        else:
+            raise HTTPException(status_code=403, detail="User don't have access to device.")
+    else:
+        raise HTTPException(status_code=400, detail="Device or user not found.")
