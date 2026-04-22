@@ -1,4 +1,5 @@
 import ssl
+import time
 import paho.mqtt.publish as publish
 from backend.settings import MQTT_CONFIG
 
@@ -28,5 +29,10 @@ def pub_button_pressed(id: int):
 
 
 if __name__ == "__main__":
-    pub_fall(6)
-    pub_button_pressed(6)
+    for i in range(1, 5):
+        pub_fall(i)
+        time.sleep(15)
+
+    for i in range(5, 9):
+        pub_button_pressed(i)
+        time.sleep(15)
