@@ -140,11 +140,14 @@ async def add_access(
 
     if device and new_user:
         if device.user_id_admin == user.id:
-            new_relationship = Have(new_user.id, device.id)
-            session.add(new_relationship)
-            session.commit()
-
-            return {"detail": {"message": "New user access added to device successfully.", "add_access": True}}
+            # Verificando se existe relacionamento
+            if not (new_user in device.users):
+                new_relationship = Have(new_user.id, device.id)
+                session.add(new_relationship)
+                session.commit()
+                return {"detail": {"message": "New user access added to device successfully.", "add_access": True}}
+            else:
+                return {"detail": {"message": "This user already have access to device.", "add_access": False}}
         else:
             raise HTTPException(status_code=403, detail={"message": "You must be device admin."})
     else:
