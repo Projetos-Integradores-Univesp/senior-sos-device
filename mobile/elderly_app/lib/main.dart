@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/api_service.dart';
 
 // Enum para tipo de alerta
 enum AlertSeverity { info, warning, error }
@@ -57,7 +58,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +79,7 @@ class MyApp extends StatelessWidget {
 }
 
 class IntroScreen extends StatelessWidget {
-  const IntroScreen({Key? key}) : super(key: key);
+  const IntroScreen({super.key});
 
   static const String loreText = 'Você recebeu seu Aparelho? Vamos ativar?';
 
@@ -136,7 +137,7 @@ class IntroScreen extends StatelessWidget {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -200,21 +201,63 @@ class _HomePageState extends State<HomePage>
 }
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _senhaController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _senhaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (_usernameController.text.isEmpty || _senhaController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, preencha todos os campos')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await ApiService.login(
+      _usernameController.text,
+      _senhaController.text,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'])),
+      );
+      // Navegar para a página de gerenciamento de dispositivos
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => DeviceManagementPage(
+            username: _usernameController.text,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -235,11 +278,12 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 32),
             TextField(
-              controller: _emailController,
+              controller: _usernameController,
+              enabled: !_isLoading,
               decoration: InputDecoration(
-                labelText: 'Email',
-                hintText: 'Digite seu email',
-                prefixIcon: const Icon(Icons.email),
+                labelText: 'Nome de Usuário',
+                hintText: 'Digite seu nome de usuário',
+                prefixIcon: const Icon(Icons.person),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -248,6 +292,7 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 16),
             TextField(
               controller: _senhaController,
+              enabled: !_isLoading,
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Senha',
@@ -267,38 +312,31 @@ class _LoginPageState extends State<LoginPage> {
                   vertical: 16,
                 ),
               ),
-              onPressed: () {
-                if (_emailController.text.isNotEmpty && _senhaController.text.isNotEmpty) {
-                  // Simular login bem-sucedido
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Fazendo login...')),
-                  );
-                  // Navegar para a página de gerenciamento de dispositivos
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => DeviceManagementPage(
-                        userEmail: _emailController.text,
+              onPressed: _isLoading ? null : _login,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
+                    )
+                  : const Text(
+                      'Entrar',
+                      style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Por favor, preencha todos os campos')),
-                  );
-                }
-              },
-              child: const Text(
-                'Entrar',
-                style: TextStyle(fontSize: 16, color: Colors.white),
-              ),
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RegistrationScreen()),
-                );
-              },
+              onPressed: _isLoading
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const RegistrationScreen()),
+                      );
+                    },
               child: const Text('Cadastre-se'),
             ),
           ],
@@ -309,23 +347,56 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 class RegistrationScreen extends StatefulWidget {
-  const RegistrationScreen({Key? key}) : super(key: key);
+  const RegistrationScreen({super.key});
 
   @override
   State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _register() async {
+    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, preencha todos os campos')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await ApiService.register(
+      _usernameController.text,
+      _passwordController.text,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'])),
+      );
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -340,32 +411,47 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Nome'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              controller: _usernameController,
+              enabled: !_isLoading,
+              decoration: InputDecoration(
+                labelText: 'Nome de Usuário',
+                hintText: 'Digite seu nome de usuário',
+                prefixIcon: const Icon(Icons.person),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _passwordController,
+              enabled: !_isLoading,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Senha'),
+              decoration: InputDecoration(
+                labelText: 'Senha',
+                hintText: 'Digite sua senha',
+                prefixIcon: const Icon(Icons.lock),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1a3a52),
               ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Cadastro realizado!')),
-                );
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cadastrar'),
+              onPressed: _isLoading ? null : _register,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Cadastrar', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -376,12 +462,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
 // Página de Gerenciamento de Dispositivos
 class DeviceManagementPage extends StatefulWidget {
-  final String userEmail;
+  final String username;
 
   const DeviceManagementPage({
-    Key? key,
-    required this.userEmail,
-  }) : super(key: key);
+    super.key,
+    required this.username,
+  });
 
   @override
   State<DeviceManagementPage> createState() => _DeviceManagementPageState();
@@ -392,17 +478,61 @@ class _DeviceManagementPageState extends State<DeviceManagementPage>
   List<Device> devices = [];
   List<Alert> alerts = [];
   late TabController _tabController;
+  bool _isLoadingDevices = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadDevices();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadDevices() async {
+    setState(() => _isLoadingDevices = true);
+
+    final result = await ApiService.getDevices();
+
+    setState(() => _isLoadingDevices = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      final devicesMap = result['data'] as Map<String, dynamic>;
+      final loadedDevices = <Device>[];
+
+      devicesMap.forEach((key, deviceData) {
+        loadedDevices.add(
+          Device(
+            id: deviceData['device_id'].toString(),
+            name: deviceData['nickname'],
+            deviceId: deviceData['device_id'].toString(),
+            dateAdded: DateTime.now(),
+          ),
+        );
+      });
+
+      setState(() => devices = loadedDevices);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _logout() async {
+    final result = await ApiService.logout();
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('/');
+    }
   }
 
   @override
@@ -419,6 +549,13 @@ class _DeviceManagementPageState extends State<DeviceManagementPage>
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: _logout,
+            tooltip: 'Logout',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -469,35 +606,39 @@ class _DeviceManagementPageState extends State<DeviceManagementPage>
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Usuário: ${widget.userEmail}',
+                'Usuário: ${widget.username}',
                 style: const TextStyle(fontSize: 14, color: Color(0xFF1a3a52)),
               ),
             ),
           ),
         ),
         Expanded(
-          child: devices.isEmpty
+          child: _isLoadingDevices
               ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.devices_other, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'Nenhum aparelho cadastrado',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Clique no botão + para adicionar um novo',
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                    ],
-                  ),
+                  child: CircularProgressIndicator(),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
-                  itemCount: devices.length,
+              : devices.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.devices_other, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text(
+                            'Nenhum aparelho cadastrado',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Clique no botão + para adicionar um novo',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(8.0),
+                      itemCount: devices.length,
                   itemBuilder: (context, index) {
                     final device = devices[index];
                     return Card(
@@ -709,31 +850,49 @@ class _DeviceManagementPageState extends State<DeviceManagementPage>
       context: context,
       builder: (context) => AddEditDeviceDialog(
         device: device,
-        onSave: (name, deviceId) {
-          setState(() {
-            if (device != null) {
-              // Editar dispositivo existente
+        onSave: (name, deviceId) async {
+          if (device == null) {
+            // Adicionar novo dispositivo via API
+            final result = await ApiService.addDevice(name);
+            if (mounted) {
+              if (result['success']) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result['message']),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                // Recarregar dispositivos
+                _loadDevices();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result['message']),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } else {
+            // Editar dispositivo existente (local por enquanto)
+            setState(() {
               final index = devices.indexWhere((d) => d.id == device.id);
               if (index != -1) {
                 devices[index] = devices[index].copyWith(name: name, deviceId: deviceId);
               }
-            } else {
-              // Adicionar novo dispositivo
-              devices.add(Device(
-                id: DateTime.now().toString(),
-                name: name,
-                deviceId: deviceId,
-                dateAdded: DateTime.now(),
-              ));
+            });
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Aparelho atualizado!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             }
-          });
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(device != null ? 'Aparelho atualizado!' : 'Aparelho adicionado!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          }
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
         },
       ),
     );
@@ -777,10 +936,10 @@ class AddEditDeviceDialog extends StatefulWidget {
   final Function(String name, String deviceId) onSave;
 
   const AddEditDeviceDialog({
-    Key? key,
+    super.key,
     this.device,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<AddEditDeviceDialog> createState() => _AddEditDeviceDialogState();
@@ -878,7 +1037,7 @@ class _AddEditDeviceDialogState extends State<AddEditDeviceDialog> {
 }
 
 class ContatoPage extends StatelessWidget {
-  const ContatoPage({Key? key}) : super(key: key);
+  const ContatoPage({super.key});
 
   @override
   Widget build(BuildContext context) {
