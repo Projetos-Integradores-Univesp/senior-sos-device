@@ -1,0 +1,26 @@
+# =============================================================================
+# sdkconfig.defaults — ElderGuard XIAO ESP32S3
+#
+# O PlatformIO aplica este arquivo automaticamente antes de compilar,
+# sobrescrevendo os defaults do ESP-IDF para as opções listadas aqui.
+#
+# SEM este arquivo, CONFIG_ULP_COPROC_ENABLED não está ativo e o header
+# "esp32s3/ulp.h" não compila (ulp_insn_t e ulp_process_macros_and_load
+# ficam indefinidos).
+# =============================================================================
+
+# --- ULP Coprocessor ---
+# Habilita o coprocessador ULP no build
+CONFIG_ULP_COPROC_ENABLED=y
+
+# Seleciona o modo FSM (Finite State Machine) — disponível no Arduino framework.
+# O modo RISC-V exigiria framework = espidf + toolchain separado.
+CONFIG_ULP_COPROC_TYPE_FSM=y
+
+# Reservar 512 bytes de RTC SLOW MEM para o programa ULP.
+# Nosso programa de pisca ocupa ~15 instruções × 4 bytes = ~60 bytes.
+# 512 bytes é o mínimo seguro; não exceder 8192 (limite total da RTC SLOW MEM).
+CONFIG_ULP_COPROC_RESERVE_MEM=512
+
+# --- Opcional: logs de boot mais silenciosos em produção ---
+# CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y

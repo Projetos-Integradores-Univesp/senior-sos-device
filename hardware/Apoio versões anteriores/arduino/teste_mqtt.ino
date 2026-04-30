@@ -14,8 +14,8 @@ const int BUTTON_PIN = 0;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // ================= Configurações da Rede e MQTT =================
-const char* ssid = "OnePlus 13 3EC0";
-const char* password = "ippt2993";
+const char* ssid = "";
+const char* password = "";
 const char* mqtt_server = "iot.gtpc.com.br"; // Ou IP do seu VPS
 const int mqtt_port = 1883;
 

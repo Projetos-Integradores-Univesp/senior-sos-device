@@ -115,7 +115,7 @@
 // ============================================================================
 #define MQTT_BROKER         "iot.gtpc.com.br"
 #define MQTT_PORT           1883        // Use 8883 for TLS
-#define MQTT_USER           "elderguard"
+#define MQTT_USER           "
 #define MQTT_PASSWORD       ""  // Set to match your Mosquitto passwd file
 #define MQTT_CLIENT_ID      "elderguard-001"
 
