@@ -260,6 +260,83 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    // Solicitar confirmação
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Confirmar exclusão de conta'),
+        content: const Text(
+          'Esta ação é irreversível. Sua conta e todos os dados associados serão deletados permanentemente. Tem certeza?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Deletar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    setState(() => _isLoading = true);
+
+    final result = await ApiService.deleteAccount();
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'])),
+      );
+      // Retornar à tela inicial
+      Navigator.of(context).pushReplacementNamed('/');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showEditAccountDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) => EditAccountDialog(
+        currentUsername: _usernameController.text,
+        onSave: (newUsername, newPassword) async {
+          final result = await ApiService.updateAccount(newUsername, newPassword);
+
+          if (mounted) {
+            if (result['success']) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(result['message'])),
+              );
+              // Atualizar o controlador com o novo username
+              _usernameController.text = newUsername;
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(result['message']),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -338,6 +415,22 @@ class _LoginPageState extends State<LoginPage> {
                       );
                     },
               child: const Text('Cadastre-se'),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _isLoading ? null : _showEditAccountDialog,
+              child: const Text(
+                'Editar Conta',
+                style: TextStyle(color: Color(0xFF1a3a52)),
+              ),
+            ),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: _isLoading ? null : _deleteAccount,
+              child: const Text(
+                'Excluir Conta',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ],
         ),
@@ -535,6 +628,86 @@ class _DeviceManagementPageState extends State<DeviceManagementPage>
     }
   }
 
+  Future<void> _deleteAccount() async {
+    // Solicitar confirmação
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Confirmar exclusão de conta'),
+        content: const Text(
+          'Esta ação é irreversível. Sua conta e todos os dados associados serão deletados permanentemente. Tem certeza?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Deletar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    final result = await ApiService.deleteAccount();
+
+    if (mounted) {
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'])),
+        );
+        // Retornar à tela inicial
+        Navigator.of(context).pushReplacementNamed('/');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showEditAccountDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) => EditAccountDialog(
+        currentUsername: widget.username,
+        onSave: (newUsername, newPassword) async {
+          final result = await ApiService.updateAccount(newUsername, newPassword);
+
+          if (mounted) {
+            if (result['success']) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(result['message'])),
+              );
+              // Fechar o dialog de edição
+              Navigator.of(context).pop();
+              // Mostrar snackbar de sucesso
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Dados da conta atualizados com sucesso!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(result['message']),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -550,6 +723,16 @@ class _DeviceManagementPageState extends State<DeviceManagementPage>
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white),
+            onPressed: _showEditAccountDialog,
+            tooltip: 'Editar Conta',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_forever, color: Colors.red),
+            onPressed: _deleteAccount,
+            tooltip: 'Deletar Conta',
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: _logout,
@@ -1108,3 +1291,174 @@ class ContatoPage extends StatelessWidget {
     );
   }
 }
+
+class EditAccountDialog extends StatefulWidget {
+  final Function(String username, String password) onSave;
+  final String currentUsername;
+
+  const EditAccountDialog({
+    super.key,
+    required this.onSave,
+    required this.currentUsername,
+  });
+
+  @override
+  State<EditAccountDialog> createState() => _EditAccountDialogState();
+}
+
+class _EditAccountDialogState extends State<EditAccountDialog> {
+  late TextEditingController _usernameController;
+  late TextEditingController _passwordController;
+  late TextEditingController _confirmPasswordController;
+  final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: widget.currentUsername);
+    _passwordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar Dados da Conta'),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _usernameController,
+                enabled: !_isLoading,
+                decoration: InputDecoration(
+                  labelText: 'Nome de Usuário',
+                  hintText: 'Digite o novo nome de usuário',
+                  prefixIcon: const Icon(Icons.person),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, digite o nome de usuário';
+                  }
+                  if (value.length < 3) {
+                    return 'Nome de usuário deve ter pelo menos 3 caracteres';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                enabled: !_isLoading,
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  labelText: 'Nova Senha',
+                  hintText: 'Digite a nova senha',
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
+                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, digite a nova senha';
+                  }
+                  if (value.length < 6) {
+                    return 'Senha deve ter pelo menos 6 caracteres';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _confirmPasswordController,
+                enabled: !_isLoading,
+                obscureText: _obscureConfirmPassword,
+                decoration: InputDecoration(
+                  labelText: 'Confirmar Senha',
+                  hintText: 'Confirme a nova senha',
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                    },
+                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor, confirme a senha';
+                  }
+                  if (value != _passwordController.text) {
+                    return 'As senhas não conferem';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1a3a52),
+          ),
+          onPressed: _isLoading
+              ? null
+              : () async {
+                  if (_formKey.currentState!.validate()) {
+                    setState(() => _isLoading = true);
+                    await widget.onSave(
+                      _usernameController.text,
+                      _passwordController.text,
+                    );
+                    setState(() => _isLoading = false);
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  }
+                },
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Text('Salvar', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+}
+
