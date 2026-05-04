@@ -1,0 +1,24 @@
+# /etc/mosquitto/acl
+# Lista de controle de acesso — ElderGuard XIAO ESP32S3
+
+# ── Dispositivo ──────────────────────────────────────────────────────────────
+# Publica: telemetria, alertas, status, debug
+# Subscreve: command (comandos remotos), ack (acknowledge do responsável)
+user elderguard
+topic write elderguard/001/alert
+topic write elderguard/001/telemetry
+topic write elderguard/001/status
+topic write elderguard/001/debug
+topic read  elderguard/001/command
+topic read  elderguard/001/ack
+
+# ── Dashboard / Responsável ──────────────────────────────────────────────────
+# Lê todos os tópicos do dispositivo
+# Escreve: command (ping, etc.), ack (apaga LED de alerta), alert e status
+#   (para limpar retained ao fazer acknowledge)
+user dashboard
+topic read  elderguard/#
+topic write elderguard/001/command
+topic write elderguard/001/ack
+topic write elderguard/001/alert
+topic write elderguard/001/status
