@@ -9,7 +9,6 @@ Projeto realizado no Projeto Integrador III -1º Semestre de 2026 da Universidad
 Colaboradores              | RA
 ---------------------------|---
 Fernando da Silva Pinto    | 23222055
-Gabriel Vitorino           | 23227577
 João Toldo                 | 23204753
 Jônatas Marques de Farias  | 2204866
 Jorge Roberto Isabella     | 23227995
