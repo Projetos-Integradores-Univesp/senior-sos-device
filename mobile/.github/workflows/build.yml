@@ -1,0 +1,36 @@
+name: App Flutter Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.x"
+          channel: stable
+
+      - name: Instalar dependências
+        working-directory: app/mobile/elderly_app
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: app/mobile/elderly_app
+        env:
+          SECRET_MQTT_BROKER:   ${{ secrets.SECRET_MQTT_BROKER }}
+          SECRET_MQTT_USERNAME: ${{ secrets.SECRET_MQTT_USERNAME }}
+          SECRET_MQTT_PASSWORD: ${{ secrets.SECRET_MQTT_PASSWORD }}
+          SECRET_API_BASE_URL:  ${{ secrets.SECRET_API_BASE_URL }}
+        run: |
+          flutter build apk --release \
+            --dart-define=MQTT_HOST=$SECRET_MQTT_BROKER \
+            --dart-define=MQTT_USERNAME=$SECRET_MQTT_USERNAME \
+            --dart-define=MQTT_PASSWORD=$SECRET_MQTT_PASSWORD \
+            --dart-define=API_BASE_URL=$SECRET_API_BASE_URL

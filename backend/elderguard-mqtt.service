@@ -1,0 +1,24 @@
+# Substituir ${SECRET_MQTT_BROKER} pelo valor real antes de instalar:
+#   envsubst < elderguard-api.service > /etc/systemd/system/elderguard-api.service
+# Ou definir EnvironmentFile=/etc/elderguard/secrets.env com as variáveis SECRET_*.
+
+[Unit]
+Description=ElderGuard MQTT Subscriber
+After=network.target elderguard-api.service
+
+[Service]
+User=www-data
+WorkingDirectory=/home/ubuntu/backend
+ExecStart=/home/ubuntu/backend/.venv/bin/python -m backend.mqtt.subscriber
+Restart=always
+RestartSec=10
+
+Environment=DEBUG=false
+Environment=DATABASE_URL=postgresql://elderguard:SUA_SENHA@localhost:5432/elderguard_db
+Environment=BROKER_URL=${SECRET_MQTT_BROKER}
+Environment=BROKER_PORT=8883
+Environment=BROKER_USERNAME=seu-usuario-mqtt
+Environment=BROKER_PASSWORD=sua-senha-mqtt
+
+[Install]
+WantedBy=multi-user.target

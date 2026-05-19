@@ -1,0 +1,12 @@
+# Credenciais — nunca versionar
+.env
+*.env
+secrets.h
+secrets.ini
+
+# PlatformIO build
+.pio/
+.vscode/
+
+# macOS
+.DS_Store

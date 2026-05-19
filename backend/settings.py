@@ -1,30 +1,38 @@
 from dotenv import load_dotenv
 import os
 
-# Em produção mudar para False
-DEBUG = True
+# Em produção, defina DEBUG=false no ambiente do sistema (EnvironmentFile do systemd).
+# Em desenvolvimento, mantenha DEBUG=true para carregar o arquivo .env local.
+DEBUG = "false"
 
-# Carregando variáveis do arquivo .env
 if DEBUG:
     load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
-# Carregando constantes
+# Configurações JWT
 SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRATION_MINUTES = float(os.getenv("ACCESS_TOKEN_EXPIRATION_MINUTES"))
+ALGORITHM = os.getenv("SECRET_ALGORITHM")
+ACCESS_TOKEN_EXPIRATION_MINUTES = float(os.getenv("SECRET_ACCESS_TOKEN_EXPIRATION_MINUTES"))
 
-# Configuração dos links do DB para models.py e alembic.ini
-MODELS_DB_LINK = "sqlite:///backend/database.db"
-ALEMBIC_DB_LINK = "sqlite:///../database.db"  # --> substituir manualmente por enquanto...
+# URL do banco de dados (PostgreSQL em produção, SQLite em dev se preferir)
+# Exemplo PostgreSQL: postgresql://elderguard:senha@localhost:5432/elderguard_db
+# Exemplo SQLite:     sqlite:///backend/database.db
+DATABASE_URL = os.getenv("SECRET_DATABASE_URL")
+
+# Mantidos por compatibilidade com o alembic/env.py (que lê ALEMBIC_DB_LINK)
+MODELS_DB_LINK = DATABASE_URL
+ALEMBIC_DB_LINK = DATABASE_URL
 
 # Configurações do broker MQTT
 MQTT_CONFIG = {
-    "BROKER_URL": os.getenv("BROKER_URL"),  # "localhost"
-    "PORT": 8883,  # (TCP) 1883, (SSL/TLS) 8883
+    "BROKER_URL": os.getenv("SECRET_MQTT_BROKER"),
+    "PORT": int(os.getenv("SECRET_MQTT_PORT")),  # (TCP) 1883, (SSL/TLS) 8883
     "CLIENT_ID": "backend-senior-sos-device-subscriber",
     "KEEPALIVE": 60,
-    "USERNAME": os.getenv("BROKER_USERNAME"),
-    "PASSWORD": os.getenv("BROKER_PASSWORD"),
-    "TOPICS": {"BUTTON_PRESSED": "devices/+/button-pressed", "FALL": "devices/+/fall"},
+    "USERNAME": os.getenv("SECRET_MQTT_USERNAME"),
+    "PASSWORD": os.getenv("SECRET_MQTT_PASSWORD"),
+    "TOPICS": {
+        "BUTTON_PRESSED": "devices/+/button-pressed",
+        "FALL": "devices/+/fall",
+    },
     "QOS": 2,
 }

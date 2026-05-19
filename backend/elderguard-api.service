@@ -1,0 +1,29 @@
+# Substituir ${SECRET_MQTT_BROKER} pelo valor real antes de instalar:
+#   envsubst < elderguard-api.service > /etc/systemd/system/elderguard-api.service
+# Ou definir EnvironmentFile=/etc/elderguard/secrets.env com as variáveis SECRET_*.
+
+[Unit]
+Description=ElderGuard FastAPI Backend
+After=network.target postgresql.service
+
+[Service]
+User=www-data
+WorkingDirectory=/home/ubuntu/backend
+ExecStart=/home/ubuntu/backend/.venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+
+# Variáveis de ambiente de produção (ajuste os valores)
+Environment=DEBUG=false
+Environment=SECRET_KEY=TROQUE-POR-UMA-CHAVE-LONGA-E-ALEATORIA
+Environment=ALGORITHM=HS256
+Environment=ACCESS_TOKEN_EXPIRATION_MINUTES=30
+Environment=DATABASE_URL=postgresql://elderguard:SUA_SENHA@localhost:5432/elderguard_db
+Environment=BROKER_URL=${SECRET_MQTT_BROKER}
+Environment=BROKER_PORT=8883
+Environment=BROKER_USERNAME=seu-usuario-mqtt
+Environment=BROKER_PASSWORD=sua-senha-mqtt
+Environment=CORS_ORIGINS=https://${SECRET_MQTT_BROKER}
+
+[Install]
+WantedBy=multi-user.target

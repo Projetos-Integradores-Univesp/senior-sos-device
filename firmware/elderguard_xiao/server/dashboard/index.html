@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- SECRET_MQTT_BROKER é injetado aqui pelo servidor/CI no deploy.
+     Nunca commitar este arquivo com a URL real preenchida.
+     Exemplo de injeção via sed no setup_server.sh:
+       sed -i "s|BROKER_URL_PLACEHOLDER|wss://${SECRET_MQTT_BROKER}/mqtt|" index.html -->
+<meta name="mqtt-broker" content="BROKER_URL_PLACEHOLDER">
+<title>ElderGuard — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+  :root {
+    --bg:           #0c0f14;
+    --surface:      #161a22;
+    --surface2:     #1e232d;
+    --border:       #2a303c;
+    --text:         #e4e7ec;
+    --text2:        #8b92a0;
+    --accent:       #38bdf8;
+    --danger:       #f87171;
+    --warn:         #fbbf24;
+    --ok:           #34d399;
+    --panic-bg:     #451a1a;
+    --panic-border: #f87171;
+    --fall-bg:      #452a1a;
+    --fall-border:  #fbbf24;
+    --radius:       10px;
+    --font:         'DM Sans', system-ui, sans-serif;
+    --mono:         'DM Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.3px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--text2);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .logo-dot.online {
+    background: var(--ok);
+    box-shadow: 0 0 8px rgba(52,211,153,0.5);
+  }
+  .logo-dot.alert {
+    background: var(--danger);
+    box-shadow: 0 0 12px rgba(248,113,113,0.6);
+    animation: pulse-dot 1s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { transform: scale(1); }
+    50%      { transform: scale(1.4); }
+  }
+
+  .conn-status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text2);
+  }
+  .conn-status .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%; background: var(--text2);
+    transition: background 0.3s;
+  }
+  .conn-status.connected .dot { background: var(--ok); }
+
+  /* ---- LAYOUT ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    grid-template-rows: auto 1fr;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 57px);
+  }
+
+  /* ---- ALERT BANNER ---- */
+  .alert-banner {
+    grid-column: 1 / -1;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: var(--surface);
+    animation: slide-in 0.2s ease;
+  }
+  .alert-banner.visible { display: flex; }
+  .alert-banner.panic {
+    background: var(--panic-bg);
+    border-left: 3px solid var(--panic-border);
+  }
+  .alert-banner.fall {
+    background: var(--fall-bg);
+    border-left: 3px solid var(--fall-border);
+  }
+  .alert-banner .alert-icon { font-size: 22px; }
+  .alert-banner .alert-text { flex: 1; font-weight: 500; }
+  .alert-banner .alert-time {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text2); white-space: nowrap;
+  }
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---- LED STATUS PANEL ---- */
+  .led-panel {
+    grid-column: 1 / -1;
+    display: none;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 20px;
+    background: #1a1f0c;
+    border-left: 3px solid var(--warn);
+  }
+  .led-panel.visible { display: flex; }
+  .led-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--warn);
+    box-shadow: 0 0 10px rgba(251,191,36,0.7);
+    animation: blink-led 1s ease-in-out infinite;
+  }
+  @keyframes blink-led {
+    0%,45%  { opacity: 1; box-shadow: 0 0 10px rgba(251,191,36,0.8); }
+    50%,95% { opacity: 0.08; box-shadow: none; }
+    100%    { opacity: 1; }
+  }
+  .led-panel .led-text { flex: 1; font-size: 13px; color: var(--warn); }
+
+  /* ---- MAIN AREA ---- */
+  .main-area {
+    background: var(--bg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Cartão de status do dispositivo */
+  .device-status-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px;
+  }
+  .device-status-card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 16px;
+  }
+
+  /* Grade de métricas de bateria / sinal */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .metric {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .metric-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-value { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+  .metric-unit  { font-size: 12px; font-weight: 400; color: var(--text2); }
+  .metric-value.ok     { color: var(--ok); }
+  .metric-value.warn   { color: var(--warn); }
+  .metric-value.danger { color: var(--danger); }
+
+  /* Barra de bateria */
+  .battery-bar-wrap {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 6px;
+  }
+  .battery-bar-label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--text2); margin-bottom: 6px;
+  }
+  .battery-bar-track {
+    height: 8px; border-radius: 4px;
+    background: var(--border); overflow: hidden;
+  }
+  .battery-bar-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.6s ease, background 0.6s ease;
+    background: var(--ok);
+  }
+
+  /* Informações do heartbeat */
+  .hb-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;
+  }
+  .hb-badge {
+    background: var(--surface2); border-radius: 6px;
+    padding: 5px 10px; font-size: 12px; color: var(--text2);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .hb-badge span { color: var(--text); font-family: var(--mono); }
+
+  /* ---- SIDEBAR ---- */
+  .sidebar {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section:last-child { border-bottom: none; flex: 1; }
+  .section-title {
+    font-size: 11px; font-weight: 600;
+    color: var(--text2); text-transform: uppercase;
+    letter-spacing: 0.6px; margin-bottom: 12px;
+  }
+
+  /* Comandos */
+  .cmd-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cmd-btn {
+    flex: 1; min-width: 80px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px;
+    padding: 9px 12px; font-size: 13px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    font-family: var(--font);
+  }
+  .cmd-btn:hover { background: var(--border); border-color: var(--accent); color: var(--accent); }
+  .cmd-btn.danger { border-color: var(--danger); color: var(--danger); }
+  .cmd-btn.danger:hover { background: var(--panic-bg); }
+  .cmd-btn.success { border-color: var(--ok); color: var(--ok); }
+  .cmd-btn.success:hover { background: #0f2a20; }
+
+  /* Dismiss buttons no banner */
+  button.dismiss {
+    background: none; border: 1px solid var(--border);
+    color: var(--text2); border-radius: 6px;
+    padding: 6px 12px; font-size: 12px;
+    cursor: pointer; white-space: nowrap;
+    font-family: var(--font);
+  }
+  button.dismiss:hover { border-color: var(--text2); color: var(--text); }
+  button.dismiss.danger { border-color: var(--danger); color: var(--danger); }
+  button.dismiss.danger:hover { background: var(--panic-bg); }
+  button.dismiss.ack { border-color: var(--ok); color: var(--ok); }
+  button.dismiss.ack:hover { background: #0f2a20; }
+
+  /* Log */
+  .log-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+  .log-item {
+    font-size: 12px; font-family: var(--mono);
+    color: var(--text2); padding: 3px 0;
+    border-bottom: 1px solid var(--surface2);
+    animation: log-in 0.15s ease;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .log-item .log-time { color: var(--border); margin-right: 6px; }
+  .log-item.alert-log { color: var(--danger); }
+  .log-item.fall-log  { color: var(--warn); }
+  .log-item.ok-log    { color: var(--ok); }
+  @keyframes log-in {
+    from { opacity: 0; transform: translateX(-4px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ---- LOGIN OVERLAY ---- */
+  #loginOverlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(12,15,20,0.97);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #loginOverlay.hidden { display: none; }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 36px 32px;
+    width: 320px; max-width: 90vw;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .login-box h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .login-box p  { font-size: 13px; color: var(--text2); }
+  .login-box input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px;
+    padding: 10px 14px; font-size: 14px;
+    font-family: var(--font); width: 100%;
+    outline: none; transition: border-color 0.15s;
+  }
+  .login-box input:focus { border-color: var(--accent); }
+  .login-box button {
+    background: var(--accent);
+    border: none; border-radius: 8px;
+    color: #0c0f14; font-weight: 700;
+    padding: 11px; font-size: 14px;
+    cursor: pointer; font-family: var(--font);
+    transition: opacity 0.15s;
+  }
+  .login-box button:hover { opacity: 0.85; }
+  #loginError { font-size: 12px; color: var(--danger); min-height: 16px; }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 700px) {
+    .grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto 1fr;
+    }
+    .sidebar { border-left: none; border-top: 1px solid var(--border); }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login overlay -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div>
+      <h2>ElderGuard</h2>
+      <p>Dashboard de monitoramento</p>
+    </div>
+    <input id="loginUser" type="text"     placeholder="Usuário MQTT" autocomplete="username">
+    <input id="loginPass" type="password" placeholder="Senha"        autocomplete="current-password">
+    <div id="loginError"></div>
+    <button onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot" id="statusDot"></div>
+    ElderGuard
+    <span style="font-size:12px;font-weight:400;color:var(--text2);margin-left:4px" id="deviceLabel">001</span>
+  </div>
+  <div class="conn-status" id="connStatus">
+    <div class="dot"></div>
+    Conectando...
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- Banner de alerta de emergência -->
+  <div class="alert-banner" id="alertBanner">
+    <span class="alert-icon" id="alertIcon"></span>
+    <div class="alert-text" id="alertText"></div>
+    <span class="alert-time" id="alertTime"></span>
+    <button class="dismiss" onclick="dismissAlert()">Ocultar</button>
+    <button class="dismiss ack" onclick="acknowledgeAlert()">✓ Confirmar e apagar LED</button>
+  </div>
+
+  <!-- Indicador do LED de alerta piscando no dispositivo -->
+  <div class="led-panel" id="ledPanel">
+    <div class="led-dot"></div>
+    <div class="led-text">
+      LED de alerta <strong>piscando</strong> no dispositivo — aguardando confirmação do responsável.
+    </div>
+    <button class="dismiss ack" onclick="acknowledgeAlert()">✓ Confirmar e apagar</button>
+  </div>
+
+  <!-- Área principal -->
+  <div class="main-area">
+
+    <!-- Status do dispositivo -->
+    <div class="device-status-card">
+      <h3>Estado da bateria</h3>
+      <div class="metrics-grid">
+        <div class="metric">
+          <div class="metric-label">Carga</div>
+          <div class="metric-value" id="battValue">--<span class="metric-unit">%</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Tensão</div>
+          <div class="metric-value" id="voltValue">--<span class="metric-unit">V</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Taxa</div>
+          <div class="metric-value" id="crateValue">--<span class="metric-unit">%/hr</span></div>
+        </div>
+      </div>
+      <div class="battery-bar-wrap">
+        <div class="battery-bar-label">
+          <span>Nível da bateria (350 mAh LiPo)</span>
+          <span id="battBarLabel">--</span>
+        </div>
+        <div class="battery-bar-track">
+          <div class="battery-bar-fill" id="battBar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conectividade e heartbeat -->
+    <div class="device-status-card">
+      <h3>Conectividade &amp; heartbeat</h3>
+      <div class="metrics-grid">
+        <div class="metric">
+          <div class="metric-label">RSSI WiFi</div>
+          <div class="metric-value" id="rssiValue">--<span class="metric-unit">dBm</span></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Boot count</div>
+          <div class="metric-value" id="bootValue">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Heartbeat</div>
+          <div class="metric-value" id="hbInterval" style="font-size:14px;color:var(--text2)">--</div>
+        </div>
+      </div>
+      <div class="hb-row">
+        <div class="hb-badge">Último: <span id="lastHeartbeat">--</span></div>
+        <div class="hb-badge">Timestamp: <span id="lastTs">--</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+
+    <!-- Comandos -->
+    <div class="section">
+      <div class="section-title">Comandos</div>
+      <div class="cmd-row">
+        <button class="cmd-btn" onclick="sendCommand('ping')">Ping</button>
+        <button class="cmd-btn success" onclick="acknowledgeAlert()">✓ Ack LED</button>
+      </div>
+    </div>
+
+    <!-- Último alerta -->
+    <div class="section" id="lastAlertSection" style="display:none">
+      <div class="section-title">Último alerta</div>
+      <div id="lastAlertDetails" style="font-size:13px;color:var(--text2);line-height:1.7"></div>
+    </div>
+
+    <!-- Log de eventos -->
+    <div class="section" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+      <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+        Log de eventos
+        <button onclick="clearLog()" style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;font-family:var(--font)">limpar</button>
+      </div>
+      <ul class="log-list" id="logList" style="overflow-y:auto;flex:1"></ul>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ============================================================================
+// Configuração MQTT
+// ============================================================================
+// BROKER_URL é lida da <meta name="mqtt-broker"> injetada no deploy.
+// Nunca commitar a URL real aqui — usar SECRET_MQTT_BROKER no servidor.
+const _brokerMeta = document.querySelector('meta[name="mqtt-broker"]');
+const BROKER_URL  = _brokerMeta ? _brokerMeta.content : '';
+if (!BROKER_URL || BROKER_URL === 'BROKER_URL_PLACEHOLDER') {
+  console.error('[ElderGuard] BROKER_URL não configurada. Verifique a meta tag mqtt-broker.');
+}
+const TOPICS = {
+  alert:    'elderguard/001/alert',
+  telemetry:'elderguard/001/telemetry',
+  status:   'elderguard/001/status',
+  command:  'elderguard/001/command',
+  ack:      'elderguard/001/ack',
+  debug:    'elderguard/001/debug',
+};
+
+let client;
+let ledAlertActive = false;   // espelha alertLedActive no dispositivo
+
+// ---- Refs DOM ----
+const $connStatus  = document.getElementById('connStatus');
+const $statusDot   = document.getElementById('statusDot');
+const $alertBanner = document.getElementById('alertBanner');
+const $alertIcon   = document.getElementById('alertIcon');
+const $alertText   = document.getElementById('alertText');
+const $alertTime   = document.getElementById('alertTime');
+const $ledPanel    = document.getElementById('ledPanel');
+
+// ============================================================================
+// MQTT
+// ============================================================================
+function initMqtt(username, password) {
+  client = mqtt.connect(BROKER_URL, {
+    username,
+    password,
+    clientId: 'dashboard-' + Math.random().toString(16).slice(2, 8),
+    clean: true,
+    reconnectPeriod: 5000,
+  });
+
+  client.on('connect', () => {
+    $connStatus.classList.add('connected');
+    $connStatus.innerHTML = '<div class="dot"></div> Conectado';
+    addLog('MQTT conectado ao broker');
+
+    // Subscrever todos os tópicos de leitura
+    [TOPICS.alert, TOPICS.telemetry, TOPICS.status, TOPICS.debug].forEach(t =>
+      client.subscribe(t, { qos: 1 })
+    );
+    // Subscrever ack para monitorar se alguém já confirmou de outra sessão
+    client.subscribe(TOPICS.ack, { qos: 1 });
+  });
+
+  client.on('close', () => {
+    $connStatus.classList.remove('connected');
+    $connStatus.innerHTML = '<div class="dot"></div> Desconectado';
+  });
+
+  client.on('message', (topic, message) => {
+    const payload = message.toString();
+    let data;
+    try { data = JSON.parse(payload); } catch { data = payload; }
+
+    switch (topic) {
+      case TOPICS.alert:    handleAlert(data, payload); break;
+      case TOPICS.telemetry:handleTelemetry(data); break;
+      case TOPICS.status:   handleStatus(data); break;
+      case TOPICS.debug:    handleDebug(payload); break;
+      case TOPICS.ack:      handleAck(payload); break;
+    }
+  });
+}
+
+// ============================================================================
+// Handlers de mensagem
+// ============================================================================
+
+function handleAlert(d, raw) {
+  // Mensagem retained vazia = alerta já foi confirmado (ACK anterior)
+  if (!d || !d.type || raw === '') {
+    clearAlertUI();
+    return;
+  }
+
+  const isPanic = d.type === 'panic';
+  const isFall  = d.type === 'fall';
+  const isLow   = d.type === 'low_battery';
+
+  $alertBanner.className = 'alert-banner visible ' + (isPanic ? 'panic' : isFall ? 'fall' : '');
+  $alertIcon.textContent  = isPanic ? '🚨' : isFall ? '⚠️' : isLow ? '🔋' : 'ℹ️';
+
+  let msg = '';
+  if (isPanic) {
+    msg = 'BOTÃO DE PÂNICO acionado — verifique o usuário imediatamente';
+  } else if (isFall) {
+    const accel = d.peak_accel != null ? ` — pico ${d.peak_accel.toFixed(1)} m/s²` : '';
+    msg = `QUEDA DETECTADA${accel}`;
+  } else if (isLow) {
+    msg = `BATERIA CRÍTICA — ${d.batt ?? '--'}% — dispositivo em modo de economia`;
+  } else {
+    msg = `Alerta: ${d.type}`;
+  }
+  $alertText.textContent = msg;
+  $alertTime.textContent = d.ts || new Date().toLocaleTimeString();
+
+  $statusDot.className = 'logo-dot alert';
+
+  // Atualizar painel "Último alerta"
+  const sec = document.getElementById('lastAlertSection');
+  sec.style.display = '';
+  document.getElementById('lastAlertDetails').innerHTML =
+    `<b>Tipo:</b> ${d.type}<br>` +
+    `<b>Bateria:</b> ${d.batt ?? '--'}%<br>` +
+    (d.peak_accel != null ? `<b>Pico aceleração:</b> ${d.peak_accel.toFixed(1)} m/s²<br>` : '') +
+    (d.peak_gyro  != null ? `<b>Pico rotação:</b> ${d.peak_gyro.toFixed(0)} °/s<br>` : '') +
+    `<b>Timestamp:</b> ${d.ts || '--'}`;
+
+  // Mostrar painel LED piscando (LED aceso até ack)
+  if (isPanic || isFall) {
+    ledAlertActive = true;
+    $ledPanel.classList.add('visible');
+  }
+
+  addLog(`ALERTA: ${d.type} — bat ${d.batt ?? '--'}% @ ${d.ts || ''}`,
+         isPanic ? 'alert-log' : isFall ? 'fall-log' : '');
+
+  // Beep de alerta via Web Audio API
+  try {
+    const ctx  = new AudioContext();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = isPanic ? 880 : 660;
+    gain.gain.value = 0.15;
+    osc.start(); osc.stop(ctx.currentTime + 0.45);
+  } catch {}
+}
+
+function handleTelemetry(d) {
+  if (!d) return;
+
+  // Bateria
+  const pct = d.batt_pct;
+  const v   = d.batt_v;
+  const rate = d.charge_rate;
+
+  const $batt = document.getElementById('battValue');
+  $batt.innerHTML = `${pct ?? '--'}<span class="metric-unit">%</span>`;
+  $batt.className = 'metric-value ' + colorByPct(pct);
+
+  const $volt = document.getElementById('voltValue');
+  $volt.innerHTML = `${v != null ? v.toFixed(2) : '--'}<span class="metric-unit">V</span>`;
+  $volt.className = 'metric-value ' + ((v ?? 4) > 3.7 ? 'ok' : (v ?? 4) > 3.5 ? 'warn' : 'danger');
+
+  const $crate = document.getElementById('crateValue');
+  if (rate != null) {
+    const sign  = rate >= 0 ? '+' : '';
+    const label = rate > 0.5 ? 'carregando' : rate < -0.5 ? 'consumindo' : 'estável';
+    const cls   = rate > 0.5 ? 'ok' : rate < -10 ? 'danger' : 'warn';
+    $crate.innerHTML = `${sign}${rate.toFixed(1)}<span class="metric-unit">%/hr ${label}</span>`;
+    $crate.className = 'metric-value ' + cls;
+  } else {
+    $crate.innerHTML = `--<span class="metric-unit">%/hr</span>`;
+    $crate.className = 'metric-value';
+  }
+
+  // Barra de bateria
+  const barFill = document.getElementById('battBar');
+  const barLabel = document.getElementById('battBarLabel');
+  if (pct != null) {
+    barFill.style.width = Math.min(Math.max(pct, 0), 100) + '%';
+    barFill.style.background = pct > 50 ? 'var(--ok)' : pct > 20 ? 'var(--warn)' : 'var(--danger)';
+    barLabel.textContent = pct + '%' + (v != null ? ` (${v.toFixed(2)} V)` : '');
+  }
+
+  // RSSI WiFi (campo "rssi" no payload do firmware)
+  const rssi = d.rssi;
+  const $rssi = document.getElementById('rssiValue');
+  if (rssi != null && rssi !== 0) {
+    $rssi.innerHTML = `${rssi}<span class="metric-unit">dBm</span>`;
+    $rssi.className = 'metric-value ' + (rssi > -60 ? 'ok' : rssi > -75 ? 'warn' : 'danger');
+  } else {
+    $rssi.innerHTML = `--<span class="metric-unit">dBm</span>`;
+    $rssi.className = 'metric-value';
+  }
+
+  // Boot + heartbeat
+  document.getElementById('bootValue').textContent = d.boot ?? '--';
+
+  // Inferir intervalo de heartbeat a partir do SoC
+  const hbEl = document.getElementById('hbInterval');
+  if (pct != null) {
+    hbEl.textContent = pct <= 10 ? '30 min (crítico)' : '15 min (normal)';
+    hbEl.style.color = pct <= 10 ? 'var(--warn)' : 'var(--text2)';
+  }
+
+  document.getElementById('lastHeartbeat').textContent = new Date().toLocaleTimeString();
+  document.getElementById('lastTs').textContent = d.ts || '--';
+
+  const rateStr = rate != null ? ` ${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%/hr` : '';
+  const rssiStr = rssi != null ? ` WiFi:${rssi}dBm` : '';
+  addLog(`Telemetria: ${pct ?? '--'}% ${v != null ? v.toFixed(2) + 'V' : ''}${rateStr}${rssiStr} @ ${d.ts || ''}`);
+}
+
+function handleStatus(d) {
+  if (!d) return;
+  if (d.ack === 'ok') {
+    // Confirmação de ack recebida do dispositivo — LED apagou
+    ledAlertActive = false;
+    $ledPanel.classList.remove('visible');
+    addLog('✓ Dispositivo confirmou: LED de alerta apagado', 'ok-log');
+    return;
+  }
+  if (d.online === true) {
+    if (!ledAlertActive) $statusDot.className = 'logo-dot online';
+    addLog('Dispositivo online');
+  } else if (d.online === false) {
+    $statusDot.className = 'logo-dot';
+    addLog('Dispositivo offline (LWT)');
+  }
+}
+
+function handleAck(payload) {
+  // Mensagem publicada no tópico /ack por qualquer sessão do dashboard
+  // (incluindo esta própria). Sincroniza o estado do LED entre abas/dispositivos.
+  if (payload && payload.trim()) {
+    addLog('ACK recebido no tópico /ack — LED deve ser apagado', 'ok-log');
+  }
+}
+
+function handleDebug(payload) {
+  const lines = payload.split('\n').filter(l => l.trim());
+  addLog('── log do dispositivo ──');
+  lines.forEach(l => addLog(l.trim()));
+}
+
+// ============================================================================
+// Acknowledge — publica no tópico /ack dedicado
+// Também limpa o alerta retained no /alert para que não reapareça
+// na próxima vez que o dashboard for aberto
+// ============================================================================
+function acknowledgeAlert() {
+  if (!client || !client.connected) {
+    addLog('Sem conexão — não é possível confirmar');
+    return;
+  }
+
+  // 1. Publicar no tópico /ack — o firmware subscreve este tópico e
+  //    chama alertLedOff() ao receber qualquer mensagem aqui.
+  client.publish(TOPICS.ack, JSON.stringify({ ack: 'ok', source: 'dashboard' }), { qos: 1 });
+
+  // 2. Limpar a mensagem retained do alerta para que não reapareça
+  //    ao recarregar o dashboard.
+  client.publish(TOPICS.alert, '', { qos: 1, retain: true });
+
+  addLog('✓ ACK enviado ao dispositivo — LED será apagado no próximo ciclo', 'ok-log');
+
+  clearAlertUI();
+}
+
+function clearAlertUI() {
+  $alertBanner.classList.remove('visible');
+  $ledPanel.classList.remove('visible');
+  ledAlertActive = false;
+  if ($statusDot.className.includes('alert')) {
+    $statusDot.className = 'logo-dot online';
+  }
+}
+
+function dismissAlert() {
+  // Oculta o banner localmente sem confirmar o alerta no dispositivo.
+  // O LED continua piscando; o painel LED permanece visível.
+  $alertBanner.classList.remove('visible');
+  addLog('Banner ocultado (LED ainda piscando — use "Confirmar" para apagar)');
+}
+
+// ============================================================================
+// Comandos
+// ============================================================================
+function sendCommand(cmd) {
+  if (client && client.connected) {
+    client.publish(TOPICS.command, cmd, { qos: 1 });
+    addLog(`Comando enviado: ${cmd}`);
+  } else {
+    addLog('Sem conexão — comando não enviado');
+  }
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+function colorByPct(pct) {
+  if (pct == null) return '';
+  return pct > 50 ? 'ok' : pct > 20 ? 'warn' : 'danger';
+}
+
+function addLog(msg, cls = '') {
+  const $list = document.getElementById('logList');
+  const li = document.createElement('li');
+  li.className = 'log-item ' + cls;
+  const time = new Date().toLocaleTimeString('pt-BR');
+  li.innerHTML = `<span class="log-time">${time}</span>${msg}`;
+  $list.prepend(li);
+  while ($list.children.length > 80) $list.lastChild.remove();
+}
+
+function clearLog() {
+  document.getElementById('logList').innerHTML = '';
+}
+
+// ============================================================================
+// Login
+// ============================================================================
+function doLogin() {
+  const user   = document.getElementById('loginUser').value.trim();
+  const pass   = document.getElementById('loginPass').value;
+  const errEl  = document.getElementById('loginError');
+
+  if (!user || !pass) { errEl.textContent = 'Preencha usuário e senha.'; return; }
+
+  errEl.textContent = 'Conectando...';
+
+  const test = mqtt.connect(BROKER_URL, {
+    username: user, password: pass,
+    clientId: 'login-' + Math.random().toString(16).slice(2, 8),
+    clean: true, connectTimeout: 8000, reconnectPeriod: 0,
+  });
+
+  test.on('connect', () => {
+    test.end(true);
+    document.getElementById('loginOverlay').classList.add('hidden');
+    initMqtt(user, pass);
+  });
+
+  test.on('error', (err) => {
+    test.end(true);
+    errEl.textContent = (err.message || '').includes('Not authorized')
+      ? 'Usuário ou senha incorretos.'
+      : 'Erro de conexão: ' + (err.message || err);
+  });
+
+  test.on('close', () => {
+    if (!document.getElementById('loginOverlay').classList.contains('hidden')) {
+      if (errEl.textContent === 'Conectando...')
+        errEl.textContent = 'Falha — verifique credenciais e rede.';
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginPass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('loginUser').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('loginPass').focus();
+  });
+});
+</script>
+</body>
+</html>

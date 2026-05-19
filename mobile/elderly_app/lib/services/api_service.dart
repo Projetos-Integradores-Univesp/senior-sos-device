@@ -3,11 +3,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class ApiService {
-  static const String baseUrl = 'http://127.0.0.1:8000';
+  // URL base da API lida de --dart-define em tempo de build.
+  // Nunca commitar a URL real aqui.
+  // Build local:  flutter run --dart-define=API_BASE_URL=https://seu-servidor.com
+  // GitHub CI:    --dart-define=API_BASE_URL=\${{ secrets.SECRET_API_BASE_URL }}
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',  // vazio força erro visível em vez de silencioso
+  );
   static const String loginEndpoint = '$baseUrl/auth/login';
   static const String registerEndpoint = '$baseUrl/users/';
   static const String devicesEndpoint = '$baseUrl/devices/';
   static const String logoutEndpoint = '$baseUrl/auth/logout';
+  static String deviceEndpoint(int deviceId) => '$devicesEndpoint$deviceId';
 
   // Fazer login
   static Future<Map<String, dynamic>> login(
@@ -171,6 +179,34 @@ class ApiService {
     }
   }
 
+  // Remover dispositivo do backend
+  static Future<Map<String, dynamic>> deleteDevice(int deviceId) async {
+    try {
+      final token = await _getAccessToken();
+      if (token == null) {
+        return {'success': false, 'message': 'Token não encontrado.'};
+      }
+      final response = await http.delete(
+        Uri.parse(deviceEndpoint(deviceId)),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Dispositivo removido.'};
+      } else {
+        final err = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': err['detail']?['message'] ?? 'Erro ao remover dispositivo',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Erro de conexão: $e'};
+    }
+  }
+
   // Fazer logout
   static Future<Map<String, dynamic>> logout() async {
     try {
@@ -240,5 +276,110 @@ class ApiService {
   static Future<bool> isAuthenticated() async {
     final token = await _getAccessToken();
     return token != null;
+  }
+
+  // Deletar conta do usuário
+  static Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      final token = await _getAccessToken();
+
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Token não encontrado. Faça login novamente.',
+        };
+      }
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/users/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        await _clearTokens();
+        return {
+          'success': true,
+          'message': 'Conta deletada com sucesso',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message':
+              errorData['detail']['message'] ?? 'Erro ao deletar conta',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Erro de conexão: $e',
+      };
+    }
+  }
+
+  // Atualizar dados da conta
+  static Future<Map<String, dynamic>> updateAccount(
+      String newUsername, String newPassword) async {
+    try {
+      final token = await _getAccessToken();
+
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Token não encontrado. Faça login novamente.',
+        };
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/users/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'username': newUsername,
+          'password': newPassword,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final refreshToken = await _getRefreshToken();
+        
+        // Atualizar o username armazenado
+        if (refreshToken != null) {
+          await _saveTokens(
+            token,
+            refreshToken,
+            newUsername,
+          );
+        }
+        
+        return {
+          'success': true,
+          'message': data['detail']['message'] ?? 'Conta atualizada com sucesso',
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['detail']['message'] ?? 'Erro ao atualizar conta',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Erro de conexão: $e',
+      };
+    }
+  }
+
+  // Obter refresh token armazenado
+  static Future<String?> _getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('refresh_token');
   }
 }

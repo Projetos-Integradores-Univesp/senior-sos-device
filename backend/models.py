@@ -1,21 +1,27 @@
-from sqlalchemy import create_engine
+import enum
+from sqlalchemy import create_engine, Enum as SAEnum
 from sqlalchemy import ForeignKey, String, DateTime
 from sqlalchemy.orm import declarative_base, relationship, Mapped, mapped_column
-from sqlalchemy_utils.types import ChoiceType
 from datetime import datetime, timezone
 from backend.settings import MODELS_DB_LINK
 
 
 # Link do banco de dados
-db = create_engine(MODELS_DB_LINK)
+# pool_pre_ping=True garante que conexões inativas sejam revalidadas (essencial em PostgreSQL).
+db = create_engine(MODELS_DB_LINK, pool_pre_ping=True)
 
 # Base do banco de dados
 Base = declarative_base()
 
 
+# Enum nativo para tipos de evento (compatível com PostgreSQL e SQLite)
+class EventType(enum.Enum):
+    BUTTON_PRESSED = "BUTTON_PRESSED"
+    FALL = "FALL"
+
+
 # Tabela Users
 class User(Base):
-    # Nome da tabela no banco de dados
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -38,7 +44,6 @@ class User(Base):
 
 # Tabela Sessions
 class Session(Base):
-    # Nome da tabela no banco de dados
     __tablename__ = "sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -56,7 +61,6 @@ class Session(Base):
 
 # Tabela Devices
 class Device(Base):
-    # Nome da tabela no banco de dados
     __tablename__ = "devices"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -77,28 +81,25 @@ class Device(Base):
 
 # Tabela Events
 class Event(Base):
-    # Nome da tabela no banco de dados
     __tablename__ = "events"
-
-    EVENTS_TYPES = (("BUTTON_PRESSED", "BUTTON_PRESSED"), ("FALL", "FALL"))
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     device_id: Mapped[int] = mapped_column(ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
-    type: Mapped[str] = mapped_column(ChoiceType(EVENTS_TYPES))
+    # SAEnum nativo: compatível com PostgreSQL (cria tipo ENUM no DB) e SQLite (armazena como VARCHAR)
+    type: Mapped[EventType] = mapped_column(SAEnum(EventType))
     time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     # Relationship
     device: Mapped[list["Device"]] = relationship(back_populates="events")
 
-    def __init__(self, device_id: int, type="BUTTON PRESSED"):
+    def __init__(self, device_id: int, type: EventType = EventType.BUTTON_PRESSED):
         self.device_id = device_id
         self.type = type
         self.time = datetime.now(timezone.utc)
 
 
-# Tabela Have
+# Tabela Have (relacionamento N:N entre Users e Devices)
 class Have(Base):
-    # Nome da tabela no banco de dados
     __tablename__ = "have"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)

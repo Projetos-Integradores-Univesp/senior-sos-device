@@ -1,0 +1,29 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY:                             ${{ secrets.SECRET_KEY }}
+      SECRET_ALGORITHM:                       ${{ secrets.SECRET_ALGORITHM }}
+      SECRET_ACCESS_TOKEN_EXPIRATION_MINUTES: ${{ secrets.SECRET_ACCESS_TOKEN_EXPIRATION_MINUTES }}
+      SECRET_DATABASE_URL:                    ${{ secrets.SECRET_DATABASE_URL }}
+      SECRET_MQTT_BROKER:                     ${{ secrets.SECRET_MQTT_BROKER }}
+      SECRET_MQTT_PORT:                       ${{ secrets.SECRET_MQTT_PORT }}
+      SECRET_MQTT_USERNAME:                   ${{ secrets.SECRET_MQTT_USERNAME }}
+      SECRET_MQTT_PASSWORD:                   ${{ secrets.SECRET_MQTT_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Instalar dependências
+        run: pip install -r backend/requirements.txt
+      - name: Executar testes
+        run: python -m pytest backend/tests/

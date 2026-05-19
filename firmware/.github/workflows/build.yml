@@ -1,0 +1,24 @@
+name: Firmware Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar PlatformIO
+        run: pip install platformio
+
+      - name: Compilar firmware
+        working-directory: firmware/elderguard_xiao
+        env:
+          SECRET_MQTT_BROKER:   ${{ secrets.SECRET_MQTT_BROKER }}
+          SECRET_MQTT_USERNAME: ${{ secrets.SECRET_MQTT_USERNAME }}
+          SECRET_MQTT_PASSWORD: ${{ secrets.SECRET_MQTT_PASSWORD }}
+        run: pio run -e xiao_esp32s3
